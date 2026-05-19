@@ -136,7 +136,9 @@ export default function App() {
           theme={theme} setTheme={setTheme} 
           lang={lang} setLang={setLang} 
           activeTab={currentTab} setActiveTab={setActiveTab} 
-          cartCount={cartCount} user={user} 
+          cartCount={cartCount} 
+          cart={cart}
+          user={user} 
           isAdmin={isAdmin}
           setIsAuthModalOpen={setIsAuthModalOpen} 
           t={t} supabase={supabase}
@@ -155,6 +157,7 @@ export default function App() {
               <HomeView 
                 key="home" 
                 onExplore={() => setActiveTab('gallery')} 
+                onQuote={() => setActiveTab('quote')}
                 t={t} 
                 theme={theme} 
                 user={user} 

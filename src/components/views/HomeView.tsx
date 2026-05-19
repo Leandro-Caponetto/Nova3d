@@ -6,8 +6,9 @@ import { Stat } from '../common/Stat';
 import { TestimonialsSection } from './TestimonialsSection';
 import { Product } from '../../types';
 
-export function HomeView({ onExplore, t, theme, user, products, onWhatsApp, onSubscribe }: { 
+export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhatsApp, onSubscribe }: { 
   onExplore: () => void, 
+  onQuote: () => void,
   t: any, 
   theme: 'dark' | 'light', 
   user: any, 
@@ -72,7 +73,9 @@ export function HomeView({ onExplore, t, theme, user, products, onWhatsApp, onSu
                 {t.explore} <ChevronRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
               </span>
             </button>
-            <button className={cn("px-12 py-5 rounded-xl font-black text-xs uppercase tracking-widest transition-all border flex items-center gap-4 backdrop-blur-md",
+            <button 
+              onClick={onQuote}
+              className={cn("px-12 py-5 rounded-xl font-black text-xs uppercase tracking-widest transition-all border flex items-center gap-4 backdrop-blur-md",
               theme === 'dark' ? "border-white/10 hover:bg-white/5 text-white" : "border-zinc-200 hover:bg-zinc-50 text-black")}>
               {t.customQuote}
             </button>
@@ -132,7 +135,7 @@ export function HomeView({ onExplore, t, theme, user, products, onWhatsApp, onSu
                   {/* Watermark Overlay */}
                   <div className="absolute top-6 left-6 z-10 px-2.5 py-1 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 pointer-events-none">
                     <span className="text-[9px] font-black tracking-tighter uppercase text-white">
-                      NOVA<span className="text-[#f59e0b] drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] glow-text">3D</span>
+                      NOVA<span className="text-primary glow-text">3D</span>
                     </span>
                   </div>
 
@@ -223,7 +226,7 @@ export function HomeView({ onExplore, t, theme, user, products, onWhatsApp, onSu
                 Explorá nuestro catálogo completo con la seguridad y respaldo de Mercado Libre. Envíos a todo el país y cuotas sin interés.
               </p>
               <a 
-                href="https://www.mercadolibre.com.ar" 
+                href="https://www.mercadolibre.com.ar/up/MLAU3981500636?offer_type=BEST_PRICE&pdp_filters=item_id:MLA3334908658&matt_tool=89488245#origin=share&sid=share&wid=MLA3334908658&action=copy" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-4 bg-[#3483FA] text-white px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#2968C8] transition-all shadow-[0_15px_40px_rgba(52,131,250,0.3)] hover:-translate-y-1 active:scale-95 group"

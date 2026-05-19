@@ -29,81 +29,63 @@ export function CartView({ cart, remove, products, t, theme, user }: any) {
 
   const total = cartWithTieredPrices.reduce((acc: number, item: any) => acc + (item.priceAtQuantity * item.quantity), 0);
 
-  const handlePayMP = async () => {
-    setIsProcessing(true);
-    try {
-      const resp = await fetch('/api/pay/mercadopago', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: cartWithTieredPrices.map((i: any) => ({ ...i, price: i.priceAtQuantity })), total, userId: user?.id })
-      });
-      const data = await resp.json();
-      if (data.init_point) {
-        window.location.href = data.init_point;
-      } else {
-        setAlert({
-          open: true,
-          title: 'PAYMENT_ERROR',
-          message: data.error || "Error processing payment through Mercado Pago. Please try again later.",
-          type: 'error'
-        });
-      }
-    } catch (err) {
-      setAlert({
-        open: true,
-        title: 'NETWORK_FAILURE',
-        message: "Unable to establish secure connection with payment processor.",
-        type: 'error'
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handlePayPayPal = async () => {
-    setIsProcessing(true);
-    try {
-      const resp = await fetch('/api/pay/paypal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: cartWithTieredPrices.map((i: any) => ({ ...i, price: i.priceAtQuantity })), total, userId: user?.id })
-      });
-      const data = await resp.json();
-      if (data.approval_url) {
-        window.location.href = data.approval_url;
-      } else {
-        setAlert({
-          open: true,
-          title: 'PAYMENT_ERROR',
-          message: "Error processing PayPal payment. Check your account standing.",
-          type: 'error'
-        });
-      }
-    } catch (err) {
-      setAlert({
-        open: true,
-        title: 'NETWORK_FAILURE',
-        message: "Unable to establish secure connection with payment processor.",
-        type: 'error'
-      });
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleWhatsAppCheckout = () => {
+    const total = cartWithTieredPrices.reduce((acc: number, item: any) => acc + (item.priceAtQuantity * item.quantity), 0);
+    
+    let message = `*NUEVO PEDIDO - NOVA3D*\n\n`;
+    message += `Hola! Me gustaría realizar el siguiente pedido:\n\n`;
+    
+    cartWithTieredPrices.forEach((item: any) => {
+      message += `• *${item.name}*\n`;
+      message += `  Cantidad: ${item.quantity}\n`;
+      message += `  Precio Unit: $${item.priceAtQuantity.toLocaleString()}\n`;
+      message += `  Subtotal: $${(item.priceAtQuantity * item.quantity).toLocaleString()}\n\n`;
+    });
+    
+    message += `*TOTAL DEL PEDIDO: $${total.toLocaleString()}*\n\n`;
+    message += `_Por favor, confírmenme los pasos para el pago y envío._`;
+    
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/5491123456789?text=${encodedMessage}`, '_blank');
   };
 
   if (cart.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-32 text-center">
-        <ShoppingCart className="w-20 h-20 mx-auto mb-10 text-zinc-500 opacity-20" />
-        <h2 className="text-4xl font-light tracking-tighter uppercase mb-6 italic">{t.cart}</h2>
-        <p className="text-zinc-500 text-sm tracking-[0.2em] uppercase font-bold">{t.emptyCart}</p>
+      <div className="relative min-h-screen overflow-hidden flex items-center justify-center">
+        {/* Background GIF */}
+        <div 
+          className="fixed inset-0 z-0 pointer-events-none transition-opacity duration-1000"
+          style={{
+            backgroundImage: `url('https://miro.medium.com/0*7GEvl-btKKnILMuo.gif')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: theme === 'dark' ? 0.08 : 0.05
+          }}
+        />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 py-32 text-center">
+          <ShoppingCart className="w-20 h-20 mx-auto mb-10 text-zinc-500 opacity-20" />
+          <h2 className="text-4xl font-light tracking-tighter uppercase mb-6 italic">{t.cart}</h2>
+          <p className="text-zinc-500 text-sm tracking-[0.2em] uppercase font-bold">{t.emptyCart}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-20 flex flex-col xl:flex-row gap-16">
-      <div className="flex-grow">
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Background GIF */}
+      <div 
+        className="fixed inset-0 z-0 pointer-events-none transition-opacity duration-1000"
+        style={{
+          backgroundImage: `url('https://miro.medium.com/0*7GEvl-btKKnILMuo.gif')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: theme === 'dark' ? 0.08 : 0.05
+        }}
+      />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 py-20 flex flex-col xl:flex-row gap-16">
+        <div className="flex-grow">
         <h2 className="text-5xl font-light tracking-tighter uppercase mb-20 leading-none">
           {t.cart} <span className="font-black italic text-primary">({cart.length})</span>
         </h2>
@@ -116,10 +98,32 @@ export function CartView({ cart, remove, products, t, theme, user }: any) {
                 {/* Watermark */}
                 <div className="absolute top-2 left-2 z-10 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded-md border border-white/5 pointer-events-none">
                   <span className="text-[7px] font-black tracking-tighter uppercase text-white">
-                    NOVA<span className="text-[#f59e0b] drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] glow-text">3D</span>
+                    NOVA<span className="text-primary glow-text">3D</span>
                   </span>
                 </div>
-                <img src={item.images[0]} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" referrerPolicy="no-referrer" />
+                {item.images && item.images.length > 0 ? (
+                  <img 
+                    src={item.images[0]} 
+                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement!.insertAdjacentHTML('beforeend', '<div class="w-full h-full flex items-center justify-center text-xs font-black text-zinc-600">3D</div>');
+                    }}
+                  />
+                ) : item.image ? (
+                  <img 
+                    src={item.image} 
+                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement!.insertAdjacentHTML('beforeend', '<div class="w-full h-full flex items-center justify-center text-xs font-black text-zinc-600">3D</div>');
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs font-black text-zinc-600">3D</div>
+                )}
                 <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
               </div>
               <div className="flex-grow text-center sm:text-left">
@@ -174,38 +178,18 @@ export function CartView({ cart, remove, products, t, theme, user }: any) {
 
           <div className="space-y-4">
             <button 
-              onClick={handlePayMP}
-              disabled={isProcessing || cart.length === 0}
+              onClick={handleWhatsAppCheckout}
+              disabled={cart.length === 0}
               className={cn(
                 "w-full py-6 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-2xl flex items-center justify-center gap-4 group relative overflow-hidden",
-                theme === 'dark' ? "bg-[#009EE3] text-white hover:bg-[#0086c3]" : "bg-[#009EE3] text-white hover:bg-[#0086c3]"
+                theme === 'dark' ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-emerald-500 text-white hover:bg-emerald-600"
               )}
-            >
-              {isProcessing ? (
-                <CreditCard className="w-5 h-5 animate-pulse" />
-              ) : (
-                <div className="flex items-center gap-3">
-                  <svg className="w-7 h-7 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-                    <ellipse cx="23.5" cy="23.5" fill="#4fc3f7" rx="21.5" ry="15.5"></ellipse>
-                    <path fill="#fafafa" d="M22.471,24.946c-1.978-5.537-4.884-10.881-6.085-12.995c-0.352-0.619-0.787-1.186-1.29-1.69 l-2.553-2.553c-0.391-0.391-1.414,0-1.414,0L9.497,8.734l-0.162,2.319L8.773,11c-0.518,0-0.938,0.42-0.938,0.938 c0,0.52,0.413,0.969,0.933,0.961c1.908-0.03,3.567,1.601,3.567,1.601h2c0.32,0.32,1.139,1.366,1.328,2.439 c0.107,0.611,0.154,1.229,0.119,1.848C15.458,24.622,16.835,26,16.835,26c-5.5-3.5-14.819-2.964-14.819-2.964l0.193,3.016L5,31 c0.919,0.212,0.744-0.626,1.765-0.504c6.199,0.741,13.57,0.004,13.57,0.004c1.5,0,1.958-0.793,2.665-1.5 C24,28,22.849,26.004,22.471,24.946z"></path>
-                    <path fill="#fafafa" d="M24.913,24.946c1.978-5.537,4.884-10.881,6.085-12.995c0.352-0.619,0.787-1.186,1.29-1.69 l2.553-2.553c0.391-0.391,1.414,0,1.414,0L37.814,9l0.235,2.053L38.611,11c0.518,0,0.938,0.42,0.938,0.938 c0,0.52-0.413,0.969-0.933,0.961c-1.908-0.03-3.567,1.601-3.567,1.601h-2c-0.32,0.32-1.139,1.366-1.328,2.439 c-0.107,0.611-0.154,1.229-0.119,1.848C31.926,24.622,30.549,26,30.549,26c5.5-3.5,15-3,15-3l-0.165,3l-3,5 c-0.919,0.212-0.744-0.626-1.765-0.504c-6.199,0.741-13.57,0.004-13.57,0.004c-1.5,0-1.958-0.793-2.665-1.5 C23.384,28,24.535,26.004,24.913,24.946z"></path>
-                  </svg>
-                  <span>MERCADO PAGO</span>
-                </div>
-              )}
-            </button>
-            <button 
-              onClick={handlePayPayPal}
-              disabled={isProcessing || cart.length === 0}
-              className={cn("w-full py-6 rounded-2xl font-black flex items-center justify-center gap-4 transition-all border text-[11px] uppercase tracking-widest group shadow-xl",
-                theme === 'dark' ? "bg-[#FFC439] border-transparent text-[#2C2E2F] hover:bg-[#e6b033]" : "bg-[#FFC439] border-transparent text-[#2C2E2F] hover:bg-[#e6b033]")}
             >
               <div className="flex items-center gap-3">
-                <svg className="w-6 h-6 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path fill="#253B80" d="M20.067 8.178c-.008.056-.013.111-.019.167-.22 2.05-1.782 4.417-4.433 4.417h-1.896c-.347 0-.649.243-.726.582l-.995 4.38h-2.906l1.83-8.062a.753.753 0 0 1 .726-.582h3.424c1.688 0 2.825.864 2.825 2.378 0 1.579-1.258 2.378-2.637 2.378h-.69a.442.442 0 0 0-.427.342l-.248 1.094h1.161c2.197 0 4.015-1.558 4.015-3.81 0-2.253-1.66-3.284-4.225-3.284h-3.957a.753.753 0 0 0-.726.582l-1.042 4.59h-2.673l1.83-8.062A.753.753 0 0 1 11.238 3h4.604c3.415 0 5.625 1.55 5.625 4.5 0 .227-.009.453-.027.678h-.001a4.91 4.91 0 0 0-1.372 0z"/>
-                  <path fill="#179BD7" d="M11.664 16.622l-.767 3.378H7.991l2.422-10.667h2.906l-1.655 7.289z"/>
+                <svg className="w-7 h-7 group-hover:scale-110 transition-transform fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
                 </svg>
-                <span>PAYPAL</span>
+                <span>PEDIR POR WHATSAPP</span>
               </div>
             </button>
           </div>
@@ -220,6 +204,7 @@ export function CartView({ cart, remove, products, t, theme, user }: any) {
         type={alert.type}
         theme={theme}
       />
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { ShoppingCart, Sun, Moon, Languages, User, LogOut, Facebook, Instagram, Mail, Search, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ShoppingCart, Sun, Moon, Languages, User, LogOut, Facebook, Instagram, Mail, Search, X, Trash2, ArrowRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Nova3DLogo } from '../common/Nova3DLogo';
 
@@ -17,10 +17,12 @@ const TelegramIcon = () => (
 );
 
 export function Navbar({ 
-  theme, setTheme, lang, setLang, activeTab, setActiveTab, cartCount, user, isAdmin, setIsAuthModalOpen, t, supabase,
+  theme, setTheme, lang, setLang, activeTab, setActiveTab, cartCount, cart, user, isAdmin, setIsAuthModalOpen, t, supabase,
   searchQuery, setSearchQuery 
 }: any) {
   const [isSearchVisible, setIsSearchVisible] = React.useState(false);
+  const [isBalloonOpen, setIsBalloonOpen] = useState(false);
+
   return (
     <nav className="sticky top-0 z-50 transition-all duration-300 pointer-events-none">
       <div className={cn("relative z-10 border-b pointer-events-auto", 
@@ -28,8 +30,8 @@ export function Navbar({
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 cursor-pointer group flex-shrink-0" onClick={() => setActiveTab('home')}>
             <Nova3DLogo theme={theme} />
-            <span className="text-2xl font-black tracking-tighter uppercase italic hidden sm:inline">
-              NOVA<span className="text-[#f59e0b] drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] transition-colors group-hover:text-primary-light">3D</span>
+            <span className={cn("text-2xl font-black tracking-tighter uppercase italic hidden sm:inline", theme === 'dark' ? "text-white" : "text-black")}>
+              NOVA<span className="text-[#f59e0b] drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] glow-text transition-all group-hover:text-primary-light">3D</span>
             </span>
           </div>
 
@@ -70,7 +72,7 @@ export function Navbar({
             </button>
             <button onClick={() => setActiveTab('gallery')} className={cn("hover:text-primary transition-all relative py-2", activeTab === 'gallery' ? "text-primary" : "")}>
               {t.catalog}
-              {activeTab === 'gallery' && <motion.div layoutId="nav-active" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary shadow-[0_0_10px_rgba(245,158,11,1),0_0_20px_rgba(245,158,11,0.6)]" />}
+              {activeTab === 'gallery' && <motion.div layoutId="nav-active" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary shadow-[0_0_8px_rgba(245,158,11,0.5)]" />}
             </button>
             <button onClick={() => setActiveTab('quote')} className={cn("hover:text-primary transition-all relative py-2", activeTab === 'quote' ? "text-primary" : "")}>
               {t.quote}
@@ -106,17 +108,119 @@ export function Navbar({
             </div>
   
             <div className="flex items-center gap-4">
-              <button 
-                onClick={() => setActiveTab('cart')}
-                className={cn("relative p-2.5 transition-all hover:bg-primary/5 rounded-xl group", activeTab === 'cart' ? "text-primary" : "text-zinc-500")}
-              >
-                <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-[#f59e0b] text-[9px] w-5 h-5 flex items-center justify-center rounded-full font-black text-white shadow-[0_0_15px_rgba(245,158,11,0.5)] border border-white/20 transition-transform scale-110">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setIsBalloonOpen(!isBalloonOpen)}
+                  className={cn("relative p-2.5 transition-all hover:bg-primary/5 rounded-xl group", isBalloonOpen ? "text-primary" : "text-zinc-500")}
+                >
+                  <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-black text-black shadow-[0_0_15px_rgba(250,204,21,0.4)] border-2 border-white transition-transform scale-110 animate-in zoom-in duration-300">
+                      {cartCount}
+                    </span>
+                  )}
+                </button>
+
+                <AnimatePresence>
+                  {isBalloonOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0, y: 20, rotate: -10 }}
+                      animate={{ 
+                        opacity: 1, 
+                        scale: 1, 
+                        y: 0, 
+                        rotate: 0,
+                        transition: {
+                          type: "spring",
+                          stiffness: 260,
+                          damping: 20
+                        }
+                      }}
+                      exit={{ opacity: 0, scale: 0, y: 20, rotate: 10 }}
+                      className="absolute right-0 top-full mt-4 w-72 origin-top-right z-50 pointer-events-auto"
+                    >
+                      {/* Floating Loop Animation */}
+                      <motion.div
+                        animate={{
+                          y: [-5, 5, -5],
+                          rotate: [-1, 1, -1]
+                        }}
+                        transition={{
+                          duration: 4,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                        className={cn(
+                          "rounded-[2.5rem] border p-6 shadow-2xl relative",
+                          theme === 'dark' ? "bg-zinc-900/95 backdrop-blur-xl border-white/10" : "bg-white/95 backdrop-blur-xl border-zinc-200"
+                        )}
+                      >
+                        {/* Balloon Triangle/Tether */}
+                        <div className={cn(
+                          "absolute -top-2 right-6 w-4 h-4 rotate-45 border-l border-t",
+                          theme === 'dark' ? "bg-zinc-900 border-white/10" : "bg-white border-zinc-200"
+                        )} />
+
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-6">Tu Carrito</h4>
+                        
+                        <div className="space-y-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                          {cart?.length === 0 ? (
+                            <p className="text-zinc-500 text-[10px] font-bold uppercase py-8 text-center">Carrito vacío</p>
+                          ) : (
+                            cart?.map((item: any) => (
+                              <div key={item.id} className="flex gap-4 group">
+                                <div className="w-12 h-12 rounded-xl border border-zinc-500/10 overflow-hidden flex-shrink-0 bg-zinc-800">
+                                  {item.images && item.images.length > 0 ? (
+                                    <img 
+                                      src={item.images[0]} 
+                                      alt={item.name} 
+                                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.parentElement!.insertAdjacentHTML('beforeend', '<div class="w-full h-full flex items-center justify-center text-[10px] font-black text-zinc-600 glow-text animate-pulse">3D</div>');
+                                      }}
+                                    />
+                                  ) : item.image ? (
+                                    <img 
+                                      src={item.image} 
+                                      alt={item.name} 
+                                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.parentElement!.insertAdjacentHTML('beforeend', '<div class="w-full h-full flex items-center justify-center text-[10px] font-black text-zinc-600">3D</div>');
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-zinc-600">3D</div>
+                                  )}
+                                </div>
+                                <div className="flex-grow min-w-0">
+                                  <h5 className="text-[10px] font-black uppercase tracking-tight truncate leading-none mb-1">{item.name}</h5>
+                                  <p className="text-[9px] font-bold text-zinc-500">{item.quantity} x ${item.price}</p>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        {cart?.length > 0 && (
+                          <div className="mt-8 pt-6 border-t border-zinc-500/10">
+                            <button 
+                              onClick={() => {
+                                setIsBalloonOpen(false);
+                                setActiveTab('cart');
+                              }}
+                              className="w-full py-4 rounded-2xl bg-primary text-white font-black text-[9px] uppercase tracking-widest hover:bg-primary-dark transition-all flex items-center justify-center gap-3 group"
+                            >
+                              Ver Todo <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                            </button>
+                          </div>
+                        )}
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               
               <button 
                 onClick={() => user ? supabase.auth.signOut() : setIsAuthModalOpen(true)}
