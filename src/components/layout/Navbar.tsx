@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, Sun, Moon, Languages, User, LogOut, Facebook, Instagram, Mail, Search, X, Trash2, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Sun, Moon, Languages, User, LogOut, Facebook, Instagram, Mail, Search, X, Trash2, ArrowRight, Menu } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Nova3DLogo } from '../common/Nova3DLogo';
 
@@ -20,8 +20,16 @@ export function Navbar({
   theme, setTheme, lang, setLang, activeTab, setActiveTab, cartCount, cart, user, isAdmin, setIsAuthModalOpen, t, supabase,
   searchQuery, setSearchQuery 
 }: any) {
-  const [isSearchVisible, setIsSearchVisible] = React.useState(false);
   const [isBalloonOpen, setIsBalloonOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const navLinks = [
+    { id: 'home', label: t.home },
+    { id: 'gallery', label: t.catalog },
+    { id: 'quote', label: t.quote },
+    { id: 'contact', label: t.contact },
+    ...(isAdmin ? [{ id: 'admin', label: t.admin }] : []),
+  ];
 
   return (
     <nav className="sticky top-0 z-50 transition-all duration-300 pointer-events-none">
@@ -31,13 +39,13 @@ export function Navbar({
           <div className="flex items-center gap-3 cursor-pointer group flex-shrink-0" onClick={() => setActiveTab('home')}>
             <Nova3DLogo theme={theme} />
             <span className={cn("text-2xl font-black tracking-tighter uppercase italic hidden sm:inline", theme === 'dark' ? "text-white" : "text-black")}>
-              NOVA<span className="text-[#f59e0b] drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] glow-text transition-all group-hover:text-primary-light">3D</span>
+              NOVA<span className="text-[#f59e0b] drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] transition-colors group-hover:text-primary-light">3D</span>
             </span>
           </div>
 
-          {/* Search Bar */}
-          <div className="flex-grow max-w-md mx-4 pointer-events-auto">
-            <div className="relative group">
+          {/* Search Bar - Hidden on mobile */}
+          <div className="hidden md:flex flex-grow max-w-md mx-4 pointer-events-auto">
+            <div className="relative group w-full">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-primary transition-colors" />
               <input 
                 type="text"
@@ -66,31 +74,19 @@ export function Navbar({
           </div>
           
           <div className="hidden lg:flex items-center gap-10 text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 flex-shrink-0">
-            <button onClick={() => setActiveTab('home')} className={cn("hover:text-primary transition-all relative py-2", activeTab === 'home' ? "text-primary" : "")}>
-              {t.home}
-              {activeTab === 'home' && <motion.div layoutId="nav-active" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary shadow-[0_0_10px_rgba(245,158,11,1),0_0_20px_rgba(245,158,11,0.6)]" />}
-            </button>
-            <button onClick={() => setActiveTab('gallery')} className={cn("hover:text-primary transition-all relative py-2", activeTab === 'gallery' ? "text-primary" : "")}>
-              {t.catalog}
-              {activeTab === 'gallery' && <motion.div layoutId="nav-active" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary shadow-[0_0_8px_rgba(245,158,11,0.5)]" />}
-            </button>
-            <button onClick={() => setActiveTab('quote')} className={cn("hover:text-primary transition-all relative py-2", activeTab === 'quote' ? "text-primary" : "")}>
-              {t.quote}
-              {activeTab === 'quote' && <motion.div layoutId="nav-active" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary shadow-[0_0_10px_rgba(245,158,11,1),0_0_20px_rgba(245,158,11,0.6)]" />}
-            </button>
-            <button onClick={() => setActiveTab('contact')} className={cn("hover:text-primary transition-all relative py-2", activeTab === 'contact' ? "text-primary" : "")}>
-              {t.contact}
-              {activeTab === 'contact' && <motion.div layoutId="nav-active" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary shadow-[0_0_10px_rgba(245,158,11,1),0_0_20px_rgba(245,158,11,0.6)]" />}
-            </button>
-            {isAdmin && (
-              <button onClick={() => setActiveTab('admin')} className={cn("hover:text-primary transition-all relative py-2", activeTab === 'admin' ? "text-primary" : "")}>
-                {t.admin}
-                {activeTab === 'admin' && <motion.div layoutId="nav-active" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary shadow-[0_0_10px_rgba(245,158,11,1),0_0_20px_rgba(245,158,11,0.6)]" />}
+            {navLinks.map((link) => (
+              <button 
+                key={link.id}
+                onClick={() => setActiveTab(link.id)} 
+                className={cn("hover:text-primary transition-all relative py-2", activeTab === link.id ? "text-primary" : "")}
+              >
+                {link.label}
+                {activeTab === link.id && <motion.div layoutId="nav-active" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary shadow-[0_0_8px_rgba(245,158,11,0.5)]" />}
               </button>
-            )}
+            ))}
           </div>
   
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 sm:gap-6">
             <div className="hidden sm:flex items-center gap-2 border-r border-zinc-500/10 pr-4">
               <button 
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -107,7 +103,7 @@ export function Navbar({
               </button>
             </div>
   
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <div className="relative">
                 <button 
                   onClick={() => setIsBalloonOpen(!isBalloonOpen)}
@@ -115,7 +111,7 @@ export function Navbar({
                 >
                   <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   {cartCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-black text-black shadow-[0_0_15px_rgba(250,204,21,0.4)] border-2 border-white transition-transform scale-110 animate-in zoom-in duration-300">
+                    <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-black text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-zinc-900 shadow-[0_0_15px_rgba(250,204,21,0.6)] animate-in zoom-in duration-300">
                       {cartCount}
                     </span>
                   )}
@@ -169,30 +165,39 @@ export function Navbar({
                           ) : (
                             cart?.map((item: any) => (
                               <div key={item.id} className="flex gap-4 group">
-                                <div className="w-12 h-12 rounded-xl border border-zinc-500/10 overflow-hidden flex-shrink-0 bg-zinc-800">
+                                <div className="w-14 h-14 rounded-2xl border border-zinc-500/10 overflow-hidden flex-shrink-0 bg-zinc-800 relative group/item">
                                   {item.images && item.images.length > 0 ? (
                                     <img 
                                       src={item.images[0]} 
                                       alt={item.name} 
-                                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                      className="w-full h-full object-cover group-hover:scale-125 transition-transform duration-700"
+                                      referrerPolicy="no-referrer"
                                       onError={(e) => {
                                         e.currentTarget.style.display = 'none';
-                                        e.currentTarget.parentElement!.insertAdjacentHTML('beforeend', '<div class="w-full h-full flex items-center justify-center text-[10px] font-black text-zinc-600 glow-text animate-pulse">3D</div>');
+                                        const parent = e.currentTarget.parentElement;
+                                        if (parent) {
+                                          parent.insertAdjacentHTML('beforeend', '<div class="w-full h-full flex items-center justify-center text-[10px] font-black text-zinc-600 bg-zinc-800">3D</div>');
+                                        }
                                       }}
                                     />
                                   ) : item.image ? (
                                     <img 
                                       src={item.image} 
                                       alt={item.name} 
-                                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                      className="w-full h-full object-cover group-hover:scale-125 transition-transform duration-700"
+                                      referrerPolicy="no-referrer"
                                       onError={(e) => {
                                         e.currentTarget.style.display = 'none';
-                                        e.currentTarget.parentElement!.insertAdjacentHTML('beforeend', '<div class="w-full h-full flex items-center justify-center text-[10px] font-black text-zinc-600">3D</div>');
+                                        const parent = e.currentTarget.parentElement;
+                                        if (parent) {
+                                          parent.insertAdjacentHTML('beforeend', '<div class="w-full h-full flex items-center justify-center text-[10px] font-black text-zinc-600 bg-zinc-800">3D</div>');
+                                        }
                                       }}
                                     />
                                   ) : (
                                     <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-zinc-600">3D</div>
                                   )}
+                                  <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover/item:opacity-100 transition-opacity pointer-events-none" />
                                 </div>
                                 <div className="flex-grow min-w-0">
                                   <h5 className="text-[10px] font-black uppercase tracking-tight truncate leading-none mb-1">{item.name}</h5>
@@ -235,12 +240,69 @@ export function Navbar({
                   {user ? <LogOut className="w-5 h-5" /> : <User className="w-5 h-5" />}
                   {user && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-bg-base shadow-sm" />}
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest">{user ? t.logout : t.account}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{user ? t.logout : t.account}</span>
+              </button>
+
+              <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="lg:hidden p-2.5 hover:bg-zinc-500/10 rounded-xl transition-colors text-zinc-500 hover:text-primary"
+              >
+                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className={cn("lg:hidden relative z-0 border-b pointer-events-auto overflow-hidden",
+              theme === 'dark' ? "bg-bg-base/95 backdrop-blur-xl border-white/5" : "bg-bg-base/95 backdrop-blur-xl border-zinc-200"
+            )}
+          >
+            <div className="px-4 py-8 space-y-6">
+              {navLinks.map((link) => (
+                <button 
+                  key={link.id}
+                  onClick={() => {
+                    setActiveTab(link.id);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={cn("w-full text-left text-sm font-black uppercase tracking-[0.3em] py-3 px-4 rounded-2xl transition-all",
+                    activeTab === link.id 
+                      ? "bg-primary text-white shadow-[0_10px_25px_rgba(245,158,11,0.3)]" 
+                      : (theme === 'dark' ? "text-zinc-500 hover:bg-white/5" : "text-zinc-500 hover:bg-black/5")
+                  )}
+                >
+                  {link.label}
+                </button>
+              ))}
+
+              <div className="pt-6 border-t border-zinc-500/10 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    className="p-4 bg-zinc-500/10 rounded-2xl transition-colors text-zinc-500"
+                  >
+                    {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                  </button>
+                  <button 
+                    onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
+                    className="py-4 px-6 bg-zinc-500/10 rounded-2xl transition-colors font-black uppercase text-[10px] tracking-widest text-zinc-500"
+                  >
+                    {lang === 'es' ? 'English' : 'Español'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Floating social links below navbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 pb-2 pointer-events-auto">

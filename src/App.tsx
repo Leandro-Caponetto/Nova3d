@@ -50,9 +50,24 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    if (data) setProfile(data);
+  const fetchProfile = async (userId: string, userEmail?: string, metadata?: any) => {
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    
+    if (error && error.code === 'PGRST116') {
+      // Profile doesn't exist, create it (likely from OAuth)
+      const { data: newProfile } = await supabase.from('profiles').insert({
+        id: userId,
+        email: userEmail || '',
+        full_name: metadata?.full_name || userEmail?.split('@')[0] || 'User',
+        role: 'user',
+        last_login: new Date().toISOString()
+      }).select().single();
+      if (newProfile) setProfile(newProfile);
+    } else if (data) {
+      setProfile(data);
+      // Update last login
+      await supabase.from('profiles').update({ last_login: new Date().toISOString() }).eq('id', userId);
+    }
   };
 
   useEffect(() => {
@@ -64,14 +79,14 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) fetchProfile(u.id);
+      if (u) fetchProfile(u.id, u.email, u.user_metadata);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
       if (u) {
-        fetchProfile(u.id);
+        fetchProfile(u.id, u.email, u.user_metadata);
       } else {
         setProfile(null);
         if (currentTab === 'admin') setCurrentTab('home');
@@ -170,8 +185,8 @@ export default function App() {
               />
             )}
             {currentTab === 'gallery' && <GalleryView key="gallery" products={products} addToCart={addToCart} t={t} theme={theme} onWhatsApp={setWsProduct} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />}
-            {currentTab === 'quote' && <QuoteView key="quote" products={products} t={t} theme={theme} />}
-            {currentTab === 'cart' && <CartView key="cart" cart={cart} remove={removeFromCart} products={products} t={t} theme={theme} user={user} />}
+            {currentTab === 'quote' && <QuoteView key="quote" products={products} addToCart={addToCart} t={t} theme={theme} />}
+            {currentTab === 'cart' && <CartView key="cart" cart={cart} remove={removeFromCart} products={products} t={t} theme={theme} />}
             {currentTab === 'contact' && <ContactView key="contact" theme={theme} t={t} />}
             {currentTab === 'admin' && <AdminView key="admin" user={user} orders={orders} theme={theme} t={t} onProductChange={fetchProducts} />}
             {currentTab === 'subscription-details' && (

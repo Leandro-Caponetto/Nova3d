@@ -153,7 +153,12 @@ export function AuthModal({ isOpen, onClose, theme, t }: {
                   type="button"
                   onClick={async () => {
                     setLoading(true);
-                    await supabase.auth.signInWithOAuth({ provider: 'google' });
+                    await supabase.auth.signInWithOAuth({ 
+                      provider: 'google',
+                      options: {
+                        redirectTo: window.location.origin
+                      }
+                    });
                   }}
                   className={cn("w-full py-4 rounded-xl border flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-widest transition-all",
                     theme === 'dark' ? "bg-white/5 border-white/10 text-white hover:bg-white/10" : "bg-white border-zinc-200 text-black hover:bg-zinc-50 shadow-sm")}
