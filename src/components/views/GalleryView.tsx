@@ -169,7 +169,7 @@ function ProductCard({ product, addToCart, onSelect, onWhatsApp, theme }: any) {
         )}>
           {product.category}
           <div className="w-[1px] h-3 bg-white/20 mx-1" />
-          <span className="text-white">NOVA<span className="text-[#f59e0b] drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] glow-text">3D</span></span>
+          <span className="text-white">NOVA<span className="text-primary glow-text">3D</span></span>
         </div>
 
         {/* Promo Banner for Keychains */}
@@ -418,7 +418,7 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
               {showFilters ? "HIDE_FILTERS" : "SHOW_FILTERS"}
             </button>
 
-            <div className={cn("relative flex items-center group", 
+            <div className={cn("hidden md:flex relative items-center group", 
               theme === 'dark' ? "text-zinc-400" : "text-zinc-500")}>
               <Search className="absolute left-4 w-4 h-4 group-focus-within:text-primary transition-colors" />
               <input 
@@ -646,22 +646,23 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className={cn("border w-full max-w-4xl rounded-3xl overflow-hidden relative shadow-3xl",
+              className={cn("border w-full max-w-4xl max-h-[90vh] rounded-3xl overflow-hidden relative shadow-3xl flex flex-col md:block",
                 theme === 'dark' ? "bg-zinc-900 border-white/10" : "bg-white border-gray-200")}
             >
               <button 
                 onClick={() => { setSelected(null); setCurrentDetailImg(0); }}
-                className="absolute top-6 right-6 p-2 bg-black/40 rounded-full hover:bg-white/10 z-[70] transition-colors"
+                className="absolute top-4 right-4 md:top-6 md:right-6 p-2 bg-black/40 rounded-full hover:bg-white/10 z-[70] transition-colors"
               >
-                <X className="w-6 h-6 text-white" />
+                <X className="w-5 h-5 md:w-6 md:h-6 text-white" />
               </button>
               
-              <div className="flex flex-col md:flex-row h-full">
-                <div className="w-full md:w-1/2 aspect-square relative overflow-hidden group/modal">
+              <div className="flex flex-col md:flex-row h-full overflow-y-auto md:overflow-visible">
+                <div className="w-full md:w-1/2 aspect-square md:aspect-auto md:h-full relative overflow-hidden group/modal shrink-0">
+
                   {/* Watermark */}
                   <div className="absolute top-8 left-8 z-10 px-3 py-1.5 bg-black/60 backdrop-blur-lg rounded-xl border border-white/10 pointer-events-none">
                     <span className="text-[10px] font-black tracking-tighter uppercase text-white">
-                      NOVA<span className="text-[#f59e0b] drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] glow-text">3D</span>
+                      NOVA<span className="text-primary glow-text">3D</span>
                     </span>
                   </div>
 
@@ -707,44 +708,45 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
                 </div>
-                <div className="w-full md:w-1/2 p-12 flex flex-col justify-center">
+                <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col">
                   <span className={cn(
-                    "font-black font-mono text-[10px] uppercase tracking-[0.4em] mb-8 inline-block px-4 py-1.5 bg-black/40 rounded-lg border backdrop-blur-md w-fit shadow-lg",
+                    "font-black font-mono text-[9px] md:text-[10px] uppercase tracking-[0.4em] mb-4 md:mb-8 inline-block px-3 py-1 md:px-4 md:py-1.5 bg-black/40 rounded-lg border backdrop-blur-md w-fit shadow-lg",
                     getCategoryColor(selected.category)
                   )}>
                     {selected.category}
                   </span>
-                  <div className="flex items-center justify-between gap-4 mb-6">
-                    <h2 className={cn("text-5xl font-light tracking-tighter uppercase italic drop-shadow-sm leading-none", theme === 'dark' ? "text-white" : "text-black")}>
+                  <div className="flex items-center justify-between gap-4 mb-4 md:mb-6">
+                    <h2 className={cn("text-3xl md:text-5xl font-light tracking-tighter uppercase italic drop-shadow-sm leading-none", theme === 'dark' ? "text-white" : "text-black")}>
                       {selected.name}
                     </h2>
                     <button 
                       onClick={() => onWhatsApp(selected)}
-                      className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-110 active:scale-95 transition-transform shrink-0"
+                      className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-110 active:scale-95 transition-transform shrink-0"
                     >
-                      <MessageCircle className="w-6 h-6" />
+                      <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
                     </button>
                   </div>
-                  <p className={cn("mb-8 leading-relaxed text-xs tracking-wide font-medium", theme === 'dark' ? "text-zinc-500" : "text-zinc-600")}>
+                  <p className={cn("mb-6 md:mb-8 leading-relaxed text-[11px] md:text-xs tracking-wide font-medium", theme === 'dark' ? "text-zinc-500" : "text-zinc-600")}>
                     {selected.description}
                   </p>
 
-                  <div className="bg-black/20 rounded-2xl p-6 border border-white/5 mb-8">
+
+                  <div className="bg-black/20 rounded-2xl p-4 md:p-6 border border-white/5 mb-6 md:mb-8">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                        <TrendingDown className="w-3 h-3" /> TIERED_PRICING_TABLE
+                      <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                        <TrendingDown className="w-3 h-3" /> TIERED_PRICING
                       </span>
                       <Info className="w-3 h-3 text-zinc-700" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <p className={cn("text-[9px] font-black tracking-widest", (detailQuantity >= 10 && detailQuantity < 50) ? "text-primary" : "text-zinc-600")}>+10 units: 10% OFF</p>
-                        <p className={cn("text-[9px] font-black tracking-widest", (detailQuantity >= 100 && detailQuantity < 500) ? "text-primary" : "text-zinc-600")}>+100 units: 25% OFF</p>
-                        <p className={cn("text-[9px] font-black tracking-widest", (detailQuantity >= 500 && detailQuantity < 1000) ? "text-primary" : "text-zinc-600")}>+500 units: 35% OFF</p>
-                        <p className={cn("text-[9px] font-black tracking-widest", detailQuantity >= 1000 ? "text-primary" : "text-zinc-600")}>+1000 units: 50% OFF</p>
+                        <p className={cn("text-[8px] md:text-[9px] font-black tracking-widest", (detailQuantity >= 10 && detailQuantity < 50) ? "text-primary" : "text-zinc-600")}>+10 unidades: 10% OFF</p>
+                        <p className={cn("text-[8px] md:text-[9px] font-black tracking-widest", (detailQuantity >= 100 && detailQuantity < 500) ? "text-primary" : "text-zinc-600")}>+100 unidades: 25% OFF</p>
+                        <p className={cn("text-[8px] md:text-[9px] font-black tracking-widest", (detailQuantity >= 500 && detailQuantity < 1000) ? "text-primary" : "text-zinc-600")}>+500 unidades: 35% OFF</p>
+                        <p className={cn("text-[8px] md:text-[9px] font-black tracking-widest", detailQuantity >= 1000 ? "text-primary" : "text-zinc-600")}>+1000 unidades: 50% OFF</p>
                       </div>
-                      <div className="flex flex-col items-end justify-center border-l border-white/5 pl-4">
-                        <label className="text-[8px] font-black uppercase tracking-widest text-zinc-500 mb-2">SYSTEM_ORDER_INPUT</label>
+                      <div className="flex flex-col items-end justify-center sm:border-l border-white/5 sm:pl-4">
+                        <label className="text-[7px] md:text-[8px] font-black uppercase tracking-widest text-zinc-500 mb-2">ORDEN_INPUT</label>
                         <input 
                           type="number" 
                           min="1" 
@@ -754,14 +756,14 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
                             const val = parseInt(e.target.value);
                             setDetailQuantity(isNaN(val) ? 1 : Math.min(2000, Math.max(1, val)));
                           }}
-                          className="w-full bg-black/40 border border-primary/30 rounded-lg p-2 text-primary font-mono font-black text-right text-lg focus:ring-2 focus:ring-primary/20 highlight-none"
+                          className="w-full bg-black/40 border border-primary/30 rounded-lg p-2 text-primary font-mono font-black text-right text-base md:text-lg focus:ring-2 focus:ring-primary/20 highlight-none"
                         />
                       </div>
                     </div>
                   </div>
                   
-                  <div className="mt-auto pt-8 border-t border-zinc-500/10 flex items-center justify-between">
-                    <div className="flex flex-col">
+                  <div className="mt-auto pt-6 md:pt-8 border-t border-zinc-500/10 flex flex-col sm:flex-row items-center justify-between gap-6">
+                    <div className="flex flex-col w-full sm:w-auto">
                       {detailDiscount && (
                          <motion.div 
                            initial={{ opacity: 0, y: 5 }}
@@ -769,27 +771,28 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
                            className="flex items-center gap-1.5 mb-1 opacity-80"
                          >
                            <Percent className="w-2.5 h-2.5 text-emerald-500" />
-                           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500 italic">
+                           <span className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500 italic">
                              {detailDiscount.split(' - ')[0]} PROMO
                            </span>
                          </motion.div>
                       )}
                       <div className="flex items-center gap-3">
-                        <span className="text-4xl font-black italic tracking-tighter text-primary">${currentDetailPrice.toLocaleString()}</span>
+                        <span className="text-3xl md:text-4xl font-black italic tracking-tighter text-primary">${currentDetailPrice.toLocaleString()}</span>
                       </div>
-                      <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mt-1">
+                      <span className="text-[9px] md:text-[10px] font-mono text-zinc-600 uppercase tracking-widest mt-1">
                         SUBTOTAL: ${(currentDetailPrice * detailQuantity).toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
                       <button 
                         onClick={() => { addToCart(selected, detailQuantity); setSelected(null); setCurrentDetailImg(0); setDetailQuantity(1); }}
-                        className="bg-primary text-white px-8 py-5 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-primary-dark transition-all shadow-[0_15px_30px_rgba(245,158,11,0.3)] flex items-center gap-4 hover:-translate-y-1 group"
+                        className="bg-primary text-white w-full sm:w-auto px-6 md:px-8 py-4 md:py-5 rounded-2xl font-black text-[10px] md:text-[11px] uppercase tracking-widest hover:bg-primary-dark transition-all shadow-[0_15px_30px_rgba(245,158,11,0.3)] flex items-center justify-center gap-4 hover:-translate-y-1 group"
                       >
-                        <ShoppingCart className="w-5 h-5 group-hover:rotate-12 transition-transform" /> {t.detailAdd}
+                        <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 group-hover:rotate-12 transition-transform" /> {t.detailAdd}
                       </button>
                     </div>
                   </div>
+
                 </div>
               </div>
             </motion.div>
