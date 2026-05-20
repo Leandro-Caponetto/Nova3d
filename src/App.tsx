@@ -184,7 +184,7 @@ export default function App() {
                 }}
               />
             )}
-            {currentTab === 'gallery' && <GalleryView key="gallery" products={products} addToCart={addToCart} t={t} theme={theme} onWhatsApp={setWsProduct} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />}
+            {currentTab === 'gallery' && <GalleryView key="gallery" products={products} addToCart={addToCart} t={t} theme={theme} onWhatsApp={setWsProduct} searchQuery={searchQuery} setSearchQuery={setSearchQuery} user={user} />}
             {currentTab === 'quote' && <QuoteView key="quote" products={products} addToCart={addToCart} t={t} theme={theme} />}
             {currentTab === 'cart' && <CartView key="cart" cart={cart} remove={removeFromCart} products={products} t={t} theme={theme} />}
             {currentTab === 'contact' && <ContactView key="contact" theme={theme} t={t} />}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ShoppingBag, Box, Users, Power, ChevronRight, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Box, Users, Power, ChevronRight, MessageSquare, Heart } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export function AdminSidebar({ activeSection, setActiveSection, onLogout, theme, t, unreadCount }: any) {
@@ -7,6 +7,7 @@ export function AdminSidebar({ activeSection, setActiveSection, onLogout, theme,
     { id: 'dashboard', icon: LayoutDashboard, label: 'Consola Central' },
     { id: 'orders', icon: ShoppingBag, label: t.orders || 'Pedidos' },
     { id: 'vendor', icon: Box, label: 'Sección__vendedor' },
+    { id: 'likes', icon: Heart, label: 'Likes_Insight' },
     { id: 'messages', icon: MessageSquare, label: 'Chat Directo', badgeCount: unreadCount },
     { id: 'users', icon: Users, label: 'Operadores' },
   ];

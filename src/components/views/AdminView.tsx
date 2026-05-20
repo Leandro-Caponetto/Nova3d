@@ -7,6 +7,7 @@ import { Dashboard } from '../admin/Dashboard';
 import { Orders } from '../admin/Orders';
 import { VendorPortal } from '../admin/VendorPortal';
 import { UsersList } from '../admin/Users';
+import { ProductLikes } from '../admin/ProductLikes';
 import { AdminMessages } from '../chat/AdminMessages';
 
 export function AdminView({ user, orders, theme, t, onProductChange }: any) {
@@ -145,6 +146,7 @@ export function AdminView({ user, orders, theme, t, onProductChange }: any) {
         {activeSection === 'dashboard' && <Dashboard theme={theme} t={t} />}
         {activeSection === 'orders' && <Orders theme={theme} t={t} />}
         {activeSection === 'vendor' && <VendorPortal theme={theme} t={t} onProductChange={onProductChange} />}
+        {activeSection === 'likes' && <ProductLikes theme={theme} t={t} />}
         {activeSection === 'messages' && <AdminMessages theme={theme} t={t} user={user} />}
         {activeSection === 'users' && <UsersList theme={theme} t={t} />}
       </main>

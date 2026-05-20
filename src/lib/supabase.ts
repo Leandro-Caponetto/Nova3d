@@ -52,6 +52,21 @@ export const supabase = createClient(finalUrl, finalKey);
  *   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
  * );
  * 
+ * -- Product Likes Table
+ * CREATE TABLE product_likes (
+ *   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+ *   user_id UUID REFERENCES auth.users ON DELETE CASCADE,
+ *   product_id TEXT NOT NULL,
+ *   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+ *   UNIQUE(user_id, product_id)
+ * );
+ * 
+ * -- Enable RLS
+ * ALTER TABLE product_likes ENABLE ROW LEVEL SECURITY;
+ * CREATE POLICY "Anyone can see likes count." ON product_likes FOR SELECT USING (true);
+ * CREATE POLICY "Authenticated users can toggle likes." ON product_likes FOR INSERT WITH CHECK (auth.uid() = user_id);
+ * CREATE POLICY "Authenticated users can remove likes." ON product_likes FOR DELETE USING (auth.uid() = user_id);
+ * 
  * -- Enable RLS
  * ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
  * CREATE POLICY "Anyone can read testimonials." ON testimonials FOR SELECT USING (true);

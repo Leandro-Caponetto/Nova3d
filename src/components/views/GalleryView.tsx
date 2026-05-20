@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   ShoppingCart, X, ChevronLeft, ChevronRight, TrendingDown, Info, 
   Percent, MessageCircle, Filter, Trash2, Palette, Maximize, 
-  Settings, Ruler, Scale, SlidersHorizontal, ChevronDown, ChevronUp, Search
+  Settings, Ruler, Scale, SlidersHorizontal, ChevronDown, ChevronUp, Search, Heart
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
 import { Product } from '../../types';
 import { WhatsAppProductModal } from '../common/WhatsAppProductModal';
@@ -120,13 +121,28 @@ const getDiscountLabel = (quantity: number) => {
   return null;
 };
 
-function ProductCard({ product, addToCart, onSelect, onWhatsApp, theme }: any) {
+function ProductCard({ product, addToCart, onSelect, onWhatsApp, theme, user, isLiked, onToggleLike }: any) {
   const [currentImg, setCurrentImg] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [isLiking, setIsLiking] = useState(false);
   const hasMultiple = product.images.length > 1;
 
   const currentPrice = getPriceTier(quantity, product.price);
   const discountLabel = getDiscountLabel(quantity);
+
+  const handleToggleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      // If no user, we could trigger a login modal. 
+      // For now, let's just alert or let the parent handle it if props were added.
+      // Since I can't easily add a new prop to the whole chain without more edits, 
+      // I'll make it show but only work for registered users.
+      return; 
+    }
+    setIsLiking(true);
+    await onToggleLike(product.id, isLiked);
+    setIsLiking(false);
+  };
 
   const nextImg = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -187,13 +203,27 @@ function ProductCard({ product, addToCart, onSelect, onWhatsApp, theme }: any) {
           </div>
         )}
 
-        {/* WhatsApp Button Floating */}
-        <button 
-          onClick={(e) => { e.stopPropagation(); onWhatsApp(product); }}
-          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-110 active:scale-95 transition-transform"
-        >
-          <MessageCircle className="w-4 h-4" />
-        </button>
+        <div className="absolute top-4 right-4 z-[20] flex flex-col gap-2">
+          <button 
+            onClick={(e) => { e.stopPropagation(); onWhatsApp(product); }}
+            className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-110 active:scale-95 transition-transform"
+          >
+            <MessageCircle className="w-4 h-4" />
+          </button>
+          
+          <button 
+            onClick={handleToggleLike}
+            disabled={isLiking}
+            className={cn(
+              "w-8 h-8 rounded-xl flex items-center justify-center shadow-lg transition-all hover:scale-110 active:scale-95 disabled:opacity-50",
+              isLiked 
+                ? "bg-rose-500 text-white shadow-rose-500/30" 
+                : "bg-black/40 backdrop-blur-md text-white border border-white/20 hover:bg-white/40"
+            )}
+          >
+            <Heart className={cn("w-4 h-4", isLiked ? "fill-current" : "")} />
+          </button>
+        </div>
 
         {hasMultiple && (
           <>
@@ -310,12 +340,13 @@ function FilterSection({ title, children, theme }: { title: string, children: Re
   );
 }
 
-export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQuery, setSearchQuery }: any) {
+export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQuery, setSearchQuery, user }: any) {
   const [selected, setSelected] = useState<Product | null>(null);
   const [currentDetailImg, setCurrentDetailImg] = useState(0);
   const [detailQuantity, setDetailQuantity] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [userLikes, setUserLikes] = useState<string[]>([]);
   
   // Filter states
   const [activeFilters, setActiveFilters] = useState({
@@ -327,6 +358,49 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
     onlyOnSale: false,
     minRating: 0
   });
+
+  const fetchUserLikes = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('product_likes')
+      .select('product_id')
+      .eq('user_id', user.id);
+    
+    if (!error && data) {
+      setUserLikes(data.map(d => d.product_id));
+    }
+  };
+
+  React.useEffect(() => {
+    fetchUserLikes();
+  }, [user]);
+
+  const toggleLike = async (productId: string, isLiked: boolean) => {
+    if (!user) return;
+    
+    if (isLiked) {
+      const { error } = await supabase
+        .from('product_likes')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('product_id', productId);
+      
+      if (!error) {
+        setUserLikes(prev => prev.filter(id => id !== productId));
+      }
+    } else {
+      const { error } = await supabase
+        .from('product_likes')
+        .insert({
+          user_id: user.id,
+          product_id: productId
+        });
+      
+      if (!error) {
+        setUserLikes(prev => [...prev, productId]);
+      }
+    }
+  };
 
   const itemsPerPage = 9;
 
@@ -409,7 +483,7 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
           <div className="flex flex-wrap items-center gap-4">
             <button 
               onClick={() => setShowFilters(!showFilters)}
-              className={cn("flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all shadow-lg hover:-translate-y-0.5 active:scale-95",
+              className={cn("hidden md:flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all shadow-lg hover:-translate-y-0.5 active:scale-95",
                 showFilters 
                   ? "bg-primary border-primary text-white shadow-primary/30 shadow-[0_0_20px_rgba(245,158,11,0.3)]" 
                   : "bg-zinc-500/5 border-zinc-500/20 text-zinc-500 hover:border-primary/40")}
@@ -418,7 +492,7 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
               {showFilters ? "HIDE_FILTERS" : "SHOW_FILTERS"}
             </button>
 
-            <div className={cn("hidden md:flex relative items-center group", 
+            <div className={cn("flex flex-grow md:flex-grow-0 relative items-center group min-w-[200px]", 
               theme === 'dark' ? "text-zinc-400" : "text-zinc-500")}>
               <Search className="absolute left-4 w-4 h-4 group-focus-within:text-primary transition-colors" />
               <input 
@@ -476,7 +550,7 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
               initial={{ x: -20, opacity: 0, height: 0 }}
               animate={{ x: 0, opacity: 1, height: "auto" }}
               exit={{ x: -20, opacity: 0, height: 0 }}
-              className="w-full md:w-[300px] flex-shrink-0"
+              className="hidden md:block w-full md:w-[300px] flex-shrink-0"
             >
               <div className={cn("sticky top-24 rounded-[32px] border p-8 space-y-2",
                 theme === 'dark' ? "bg-zinc-900/50 border-white/5" : "bg-white border-zinc-200")}>
@@ -598,6 +672,9 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
                   onSelect={setSelected} 
                   onWhatsApp={onWhatsApp}
                   theme={theme} 
+                  user={user}
+                  isLiked={userLikes.includes(product.id)}
+                  onToggleLike={toggleLike}
                 />
               )) : (
                 <motion.div 
