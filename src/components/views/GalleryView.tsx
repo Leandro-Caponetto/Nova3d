@@ -375,6 +375,43 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
     fetchUserLikes();
   }, [user]);
 
+  const NewsTicker = () => (
+    <div className={cn("w-full py-4 mb-20 overflow-hidden border-y border-zinc-500/10 flex items-center relative", 
+      theme === 'dark' ? "bg-black/20" : "bg-white")}>
+      {/* Newspaper vibe background accents */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none select-none overflow-hidden flex flex-wrap gap-4 p-2 text-[8px] font-black uppercase tracking-widest leading-none">
+        {Array.from({ length: 50 }).map((_, i) => (
+          <span key={i}>BREAKING_NEWS // WHOLESALE_AVAILABLE // EXCLUSIVE_3D_PIECES //</span>
+        ))}
+      </div>
+
+      <motion.div 
+        animate={{ x: [0, -1500] }}
+        transition={{ 
+          duration: 30, 
+          repeat: Infinity, 
+          ease: "linear" 
+        }}
+        className="flex items-center gap-20 whitespace-nowrap relative z-10"
+      >
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="flex items-center gap-20">
+            <div className="flex items-center gap-4">
+              <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+              <span className={cn("text-xs md:text-base font-black uppercase tracking-[0.25em] italic leading-none",
+                theme === 'dark' ? "text-white" : "text-black")}>
+                Consulte por Whatsapp las compra de los productos por Mayor
+              </span>
+            </div>
+            <div className="flex items-center gap-4 bg-primary/10 px-4 py-2 rounded-lg border border-primary/20">
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">URGENTE_SYSTEM_INTEL</span>
+            </div>
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  );
+
   const toggleLike = async (productId: string, isLiked: boolean) => {
     if (!user) return;
     
@@ -402,7 +439,10 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
     }
   };
 
-  const itemsPerPage = 9;
+  const [isMobile, setIsMobile] = useState(false);
+  const observerRef = React.useRef<HTMLDivElement>(null);
+
+  const itemsPerPage = 12;
 
   const filterOptions = useMemo(() => {
     const cats = ['all', ...Array.from(new Set(products.map((p: any) => p.category))) as string[]];
@@ -410,7 +450,6 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
     const sizes = ['all', ...Array.from(new Set(products.flatMap((p: any) => p.sizes || []))) as string[]];
     const materials = ['all', ...Array.from(new Set(products.map((p: any) => p.material).filter(Boolean))) as string[]];
     
-    // Add some default values if nothing exists to show the user how it looks
     if (colors.length === 1) colors.push('Rojo', 'Azul', 'Verde', 'Negro', 'Blanco', 'Dorado', 'Plata', 'Bronce');
     if (sizes.length === 1) sizes.push('Mini', 'Normal', 'Coleccionista', 'Escala 1:1');
     if (materials.length === 1) materials.push('PLA+', 'PETG', 'ABS', 'Resina (8K)', 'Flexible');
@@ -423,37 +462,91 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
       const matchesSearch = !searchQuery || [p.name, p.category, p.description].some(field => 
         field?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      
       const matchesCategory = activeFilters.category === 'all' || p.category === activeFilters.category;
-      
       const matchesColor = activeFilters.color === 'all' || (p.colors && p.colors.includes(activeFilters.color));
-      
       const matchesSize = activeFilters.size === 'all' || (p.sizes && p.sizes.includes(activeFilters.size));
-      
       const matchesMaterial = activeFilters.material === 'all' || p.material === activeFilters.material;
-      
       const matchesPrice = p.price >= activeFilters.priceRange[0] && p.price <= activeFilters.priceRange[1];
-
       const matchesSale = !activeFilters.onlyOnSale || (p.pricePerGram !== undefined || p.pricePerHour !== undefined); 
-      // Assuming products with these fields are special/custom or have different pricing
-      // Better yet, let's just check rating if it exists
       const matchesRating = p.rating ? p.rating >= activeFilters.minRating : activeFilters.minRating === 0;
 
       return matchesSearch && matchesCategory && matchesColor && matchesSize && matchesMaterial && matchesPrice && matchesSale && matchesRating;
     });
   }, [products, searchQuery, activeFilters]);
 
-  const currentDetailPrice = selected ? getPriceTier(detailQuantity, selected.price) : 0;
-  const detailDiscount = selected ? getDiscountLabel(detailQuantity) : null;
-
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  
+
+  // Check for mobile on mount and resize
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Infinite scroll observer for mobile
+  React.useEffect(() => {
+    if (!isMobile || currentPage >= totalPages) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setCurrentPage(prev => Math.min(prev + 1, totalPages));
+      }
+    }, { threshold: 0.1 });
+
+    if (observerRef.current) observer.observe(observerRef.current);
+    return () => observer.disconnect();
+  }, [isMobile, currentPage, totalPages]);
+
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, filteredProducts.length, activeFilters]);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+  const currentProducts = isMobile 
+    ? filteredProducts.slice(0, currentPage * itemsPerPage)
+    : filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+
+  const currentDetailPrice = selected ? getPriceTier(detailQuantity, selected.price) : 0;
+  const detailDiscount = selected ? getDiscountLabel(detailQuantity) : null;
+
+  const Pagination = () => {
+    if (totalPages <= 1 || isMobile) return null;
+    return (
+      <div className="flex items-center gap-6 bg-black/5 dark:bg-white/5 p-2 rounded-[24px] border border-zinc-500/10">
+        <button 
+          disabled={currentPage === 1}
+          onClick={() => {
+            setCurrentPage(prev => prev - 1);
+            window.scrollTo({ top: 300, behavior: 'smooth' });
+          }}
+          className={cn("w-14 h-14 rounded-2xl border flex items-center justify-center transition-all disabled:opacity-10 text-lg shadow-lg",
+            theme === 'dark' ? "border-white/10 hover:bg-primary hover:text-white" : "border-zinc-200 hover:bg-primary hover:text-white")}
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        
+        <div className="flex flex-col items-center gap-1 px-4">
+          <span className="text-[12px] font-black uppercase tracking-[0.3em] text-primary italic leading-none">PÁGINA</span>
+          <span className={cn("text-2xl font-black italic tracking-tighter leading-none", theme === 'dark' ? "text-white" : "text-black")}>
+            {currentPage} <span className="text-zinc-500 text-base">/ {totalPages}</span>
+          </span>
+        </div>
+
+        <button 
+          disabled={currentPage === totalPages}
+          onClick={() => {
+            setCurrentPage(prev => prev + 1);
+            window.scrollTo({ top: 300, behavior: 'smooth' });
+          }}
+          className={cn("w-14 h-14 rounded-2xl border flex items-center justify-center transition-all disabled:opacity-10 text-lg shadow-lg",
+            theme === 'dark' ? "border-white/10 hover:bg-primary hover:text-white" : "border-zinc-200 hover:bg-primary hover:text-white")}
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+      </div>
+    );
+  };
 
   const resetFilters = () => {
     setActiveFilters({
@@ -473,6 +566,8 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
       animate={{ opacity: 1, y: 0 }}
       className="max-w-7xl mx-auto px-4 py-12"
     >
+      <NewsTicker />
+      
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
         <div className="space-y-4">
@@ -519,27 +614,7 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
           </div>
         </div>
         
-        {totalPages > 1 && (
-          <div className="flex items-center gap-4">
-            <button 
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => prev - 1)}
-              className={cn("w-10 h-10 rounded-xl border flex items-center justify-center transition-all disabled:opacity-20",
-                theme === 'dark' ? "border-white/10 hover:bg-primary hover:text-white" : "border-zinc-200 hover:bg-primary hover:text-white")}
-            >
-              ‹
-            </button>
-            <span className="text-[10px] font-black uppercase tracking-widest text-primary italic">P_ {currentPage} / {totalPages}</span>
-            <button 
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(prev => prev + 1)}
-              className={cn("w-10 h-10 rounded-xl border flex items-center justify-center transition-all disabled:opacity-20",
-                theme === 'dark' ? "border-white/10 hover:bg-primary hover:text-white" : "border-zinc-200 hover:bg-primary hover:text-white")}
-            >
-              ›
-            </button>
-          </div>
-        )}
+        <Pagination />
       </div>
 
       <div className="flex flex-col md:flex-row gap-8">
@@ -695,6 +770,20 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+
+          {/* Bottom Pagination & Mobile Observer */}
+          <div className="mt-20 flex justify-center pb-20">
+            {isMobile ? (
+              currentPage < totalPages && (
+                <div ref={observerRef} className="flex flex-col items-center gap-4 py-10">
+                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 animate-pulse">CARGANDO_PIEZAS...</span>
+                </div>
+              )
+            ) : (
+              <Pagination />
+            )}
           </div>
         </div>
       </div>
