@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bot } from 'lucide-react';
+import { Bot, Menu } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
 import { AdminSidebar } from '../admin/AdminSidebar';
@@ -16,6 +16,7 @@ export function AdminView({ user, orders, theme, t, onProductChange }: any) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const playNotificationSound = () => {
     const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
@@ -125,7 +126,7 @@ export function AdminView({ user, orders, theme, t, onProductChange }: any) {
   }
 
   return (
-    <div className="flex h-[calc(100vh-80px)] overflow-hidden">
+    <div className="flex h-[calc(100vh-80px)] overflow-hidden relative">
       <AdminSidebar 
         activeSection={activeSection} 
         setActiveSection={setActiveSection} 
@@ -133,14 +134,24 @@ export function AdminView({ user, orders, theme, t, onProductChange }: any) {
         theme={theme} 
         t={t} 
         unreadCount={unreadCount}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
       
-      <main className="flex-grow overflow-y-auto p-12 custom-scrollbar">
-        <header className="mb-16">
-          <h1 className="text-5xl font-black uppercase italic tracking-tighter mb-2">
-            Sección__{activeSection}
-          </h1>
-          <p className="text-[10px] text-primary font-black uppercase tracking-[0.5em] opacity-60">System Operational // Level 4 Clear</p>
+      <main className="flex-grow overflow-y-auto p-4 md:p-12 custom-scrollbar">
+        <header className="mb-8 md:mb-16 flex items-center gap-4">
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="lg:hidden p-3 rounded-2xl bg-zinc-500/10 text-zinc-500 hover:text-primary transition-colors"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <div>
+            <h1 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter mb-2">
+              Sección__{activeSection}
+            </h1>
+            <p className="text-[10px] text-primary font-black uppercase tracking-[0.5em] opacity-60">System Operational // Level 4 Clear</p>
+          </div>
         </header>
 
         {activeSection === 'dashboard' && <Dashboard theme={theme} t={t} />}
