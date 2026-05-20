@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, User, Search, Filter, Loader2, Send } from 'lucide-react';
+import { MessageSquare, User, Search, Filter, Loader2, Send, ArrowLeft } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
 import { ChatThread, ChatMessage } from '../../types';
@@ -56,10 +56,13 @@ export function AdminMessages({ theme, t, user }: AdminMessagesProps) {
   );
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="grid grid-cols-12 gap-8 h-full min-h-[600px]">
+    <div className="flex flex-col h-[calc(100vh-250px)] lg:h-full">
+      <div className="grid grid-cols-12 gap-0 lg:gap-8 h-full">
         {/* Thread List */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col border rounded-[32px] overflow-hidden bg-black/5 dark:bg-white/5 border-zinc-500/10">
+        <div className={cn(
+          "col-span-12 lg:col-span-4 flex flex-col border rounded-[32px] overflow-hidden bg-black/5 dark:bg-white/5 border-zinc-500/10 h-full",
+          selectedThread ? "hidden lg:flex" : "flex"
+        )}>
           <div className="p-6 border-b border-zinc-500/10 space-y-4">
             <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary italic">Terminal_Mensajes</h3>
             <div className="relative">
@@ -151,20 +154,31 @@ export function AdminMessages({ theme, t, user }: AdminMessagesProps) {
         </div>
 
         {/* Chat Window */}
-        <div className="col-span-12 lg:col-span-8 flex flex-col border rounded-[32px] overflow-hidden bg-black/5 dark:bg-white/5 border-zinc-500/10">
+        <div className={cn(
+          "col-span-12 lg:col-span-8 flex flex-col border rounded-[32px] overflow-hidden bg-black/5 dark:bg-white/5 border-zinc-500/10 h-full",
+          !selectedThread ? "hidden lg:flex" : "flex"
+        )}>
           {selectedThread ? (
             <div className="flex flex-col h-full">
-              <div className="p-8 border-b border-zinc-500/10 flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-black italic uppercase tracking-tighter mb-1">{selectedThread.product_name || 'Protocolo_Libre'}</h3>
-                  <p className="text-[9px] font-black uppercase tracking-[0.4em] text-primary">{selectedThread.user_email}</p>
+              <div className="p-4 md:p-8 border-b border-zinc-500/10 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4 min-w-0">
+                  <button 
+                    onClick={() => setSelectedThread(null)}
+                    className="lg:hidden p-2 hover:bg-zinc-500/10 rounded-xl transition-colors text-zinc-500"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <div className="min-w-0">
+                    <h3 className="text-lg md:text-xl font-black italic uppercase tracking-tighter mb-1 truncate">{selectedThread.product_name || 'Protocolo_Libre'}</h3>
+                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-primary truncate">{selectedThread.user_email}</p>
+                  </div>
                 </div>
-                <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                <div className="hidden sm:block px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg shrink-0">
                   <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 animate-pulse">TERMINAL_ACTIVA</span>
                 </div>
               </div>
               
-              <div className="flex-grow p-8">
+              <div className="flex-grow p-4 md:p-8 min-h-0">
                 <ChatWindow threadId={selectedThread.id} user={user} theme={theme} t={t} />
               </div>
             </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'motion/react';
 import { Send, User, Bot, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
@@ -192,7 +193,7 @@ export function ChatWindow({ threadId, user, theme, t }: ChatWindowProps) {
 
       <div 
         ref={scrollRef}
-        className="flex-grow overflow-y-auto px-4 space-y-4 mb-4 custom-scrollbar min-h-[300px] max-h-[400px]"
+        className="flex-grow overflow-y-auto px-4 space-y-4 mb-4 custom-scrollbar"
       >
         {messages.length === 0 && !error && (
           <div className="flex flex-col items-center justify-center h-full text-center p-8 opacity-40">
