@@ -2,6 +2,7 @@ import React from 'react';
 import { MessageCircle, Phone } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
+import whatsappIcon from "../../imagen/whatsapp-svgrepo-com.svg";
 
 export function WhatsAppButton({ theme }: { theme: 'dark' | 'light' }) {
   // Use a placeholder number, users can change it later
@@ -26,7 +27,7 @@ export function WhatsAppButton({ theme }: { theme: 'dark' | 'light' }) {
       <div className="absolute inset-0 bg-white/20 rounded-[24px] scale-0 group-hover:scale-100 transition-transform duration-500" />
       
       <img 
-        src="https://img.freepik.com/vector-premium/whatsapp-vector-logo-icono-logotipo-vector-redes-sociales_901408-402.jpg?semt=ais_hybrid&w=740&q=80" 
+        src="https://png.pngtree.com/png-vector/20221018/ourmid/pngtree-whatsapp-phone-icon-png-image_6315989.png" 
         alt="WhatsApp"
         className="w-2/3 h-2/3 object-contain drop-shadow-md rounded-[12px]"
         referrerPolicy="no-referrer"
