@@ -94,11 +94,12 @@ const KEYCHAIN_MIN_PRICE = 4500;
 
 interface QuoteViewProps {
   products?: Product[];
+  addToCart: (product: any, quantity: number) => void;
   t: any;
   theme: string;
 }
 
-export function QuoteView({ products = [], theme }: QuoteViewProps) {
+export function QuoteView({ products = [], addToCart, theme }: QuoteViewProps) {
   const [selectedCategory, setSelectedCategory] = useState('3D_PRINTING');
   const [formData, setFormData] = useState({
     width: 10,
@@ -186,7 +187,12 @@ export function QuoteView({ products = [], theme }: QuoteViewProps) {
     }
 
     const discountInfo = getDiscountInfo(formData.quantity);
-    const discountedUnitPrice = baseUnitPrice * (1 - discountInfo.discount);
+    let discountedUnitPrice = baseUnitPrice * (1 - discountInfo.discount);
+    
+    // Special Keychain Promo
+    if (formData.printType === 'LLAVERO' && formData.quantity >= 20) {
+      discountedUnitPrice = Math.min(discountedUnitPrice, 1500);
+    }
     
     setWeight(Math.round(estWeight * formData.quantity));
     setPrintTime(Math.round(estTime * formData.quantity * 10) / 10);
@@ -194,6 +200,25 @@ export function QuoteView({ products = [], theme }: QuoteViewProps) {
     setFullPriceTotal(Math.round(baseUnitPrice * formData.quantity));
     setEstimate(Math.round((discountedUnitPrice * formData.quantity) / 10) * 10);
   }, [formData, selectedProduct]);
+
+  const handleQuoteAddToCart = () => {
+    const typeLabel = PRINT_TYPES.find(m => m.id === formData.printType)?.label || 'Pieza 3D';
+    
+    // Create a virtual product for the custom quote
+    const virtualProduct = {
+      id: `custom-${Date.now()}`,
+      name: `Personalizado: ${selectedProduct ? selectedProduct.name : typeLabel}`,
+      description: `Medidas: ${formData.width}x${formData.height}x${formData.depth}cm. Material: ${formData.material}.`,
+      price: unitPrice,
+      images: selectedProduct ? selectedProduct.images : (selectedFile ? [URL.createObjectURL(selectedFile)] : []),
+      category: 'CUSTOM'
+    };
+
+    addToCart(virtualProduct, formData.quantity);
+    
+    // Show a small animation or feedback could go here
+    alert("Agregado al carrito exitosamente");
+  };
 
   const sendWhatsApp = () => {
     const typeLabel = PRINT_TYPES.find(m => m.id === formData.printType)?.label;
@@ -610,14 +635,16 @@ export function QuoteView({ products = [], theme }: QuoteViewProps) {
 
               <div className="space-y-4">
                 <button 
-                  onClick={() => {}}
+                  onClick={sendWhatsApp}
                   disabled={!formData.acceptedTerms}
                   className="w-full h-16 bg-primary text-white font-black uppercase text-[11px] tracking-[0.2em] rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="w-4 h-4" /> Enviar pedido
                 </button>
                 <button 
-                  className="w-full h-16 bg-transparent border-2 border-primary text-primary font-black uppercase text-[11px] tracking-[0.2em] rounded-2xl hover:bg-primary/5 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                  onClick={handleQuoteAddToCart}
+                  disabled={!formData.acceptedTerms}
+                  className="w-full h-16 bg-transparent border-2 border-primary text-primary font-black uppercase text-[11px] tracking-[0.2em] rounded-2xl hover:bg-primary/5 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ShoppingCart className="w-4 h-4" /> GUARDAR EN EL CARRITO
                 </button>

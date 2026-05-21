@@ -127,8 +127,16 @@ function ProductCard({ product, addToCart, onSelect, onWhatsApp, theme, user, is
   const [isLiking, setIsLiking] = useState(false);
   const hasMultiple = product.images.length > 1;
 
-  const currentPrice = getPriceTier(quantity, product.price);
-  const discountLabel = getDiscountLabel(quantity);
+  const isKeychain = (product.name.toLowerCase().includes('llavero') || product.category.toLowerCase().includes('llavero') || product.id.includes('llavero') || product.name.toLowerCase().includes('pulpo') || product.name.toLowerCase().includes('harry potter'));
+  
+  let currentPrice = getPriceTier(quantity, product.price);
+  if (isKeychain && quantity >= 20) {
+    currentPrice = Math.min(currentPrice, 1500); // 20 units for $30,000 => $1500 each
+  }
+  
+  const discountLabel = isKeychain && quantity >= 20 && currentPrice === 1500 
+    ? "PROMO PACK: $30.000 / 20u" 
+    : getDiscountLabel(quantity);
 
   const handleToggleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -190,15 +198,15 @@ function ProductCard({ product, addToCart, onSelect, onWhatsApp, theme, user, is
 
         {/* Promo Banner for Keychains */}
         {(product.name.toLowerCase().includes('llavero') || product.category.toLowerCase().includes('llavero') || product.id.includes('llavero') || product.name.toLowerCase().includes('pulpo') || product.name.toLowerCase().includes('harry potter')) && (
-          <div className="absolute top-16 left-0 z-10 bg-red-600 px-4 py-2 rounded-r-xl border-y border-r border-white/30 shadow-[0_10px_20px_rgba(220,38,38,0.4)] animate-pulse">
+          <div className="absolute top-16 left-0 z-10 bg-red-600 px-4 py-2 rounded-r-xl border-y border-r border-white/30 shadow-[0_10px_20px_rgba(220,38,38,0.4)] animate-pulse text-white">
             <div className="flex flex-col">
-              <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white leading-none mb-1">PROMO MAYORISTA</span>
+              <span className="text-[7px] font-black uppercase tracking-[0.2em] leading-none mb-1">PROMO PACK</span>
               <div className="flex items-baseline gap-1">
-                <span className="text-[11px] font-black uppercase tracking-tighter text-white leading-none">1000u</span>
-                <span className="text-[9px] font-bold text-white/90">al</span>
-                <span className="text-[13px] font-black italic text-white">50%</span>
-                <span className="text-[8px] font-bold text-white/70">C/U</span>
+                <span className="text-[11px] font-black uppercase tracking-tighter leading-none">20u</span>
+                <span className="text-[9px] font-bold opacity-90">x</span>
+                <span className="text-[13px] font-black italic tracking-tight">$30.000</span>
               </div>
+              <span className="text-[6px] font-bold opacity-70 uppercase tracking-widest mt-1">Llaveros Selección</span>
             </div>
           </div>
         )}

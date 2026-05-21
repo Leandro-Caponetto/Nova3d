@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { ShoppingCart, CreditCard } from 'lucide-react';
+import React from 'react';
+import { ShoppingCart } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { CartItem } from '../../types';
-import { AlertModal } from '../common/AlertModal';
 
 const getPriceTier = (quantity: number, basePrice: number) => {
   if (quantity >= 1000) return basePrice * 0.50; // 50% OFF (Mega Wholesaler)
@@ -13,24 +12,25 @@ const getPriceTier = (quantity: number, basePrice: number) => {
   return basePrice;
 };
 
-export function CartView({ cart, remove, products, t, theme, user }: any) {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [alert, setAlert] = useState<{ open: boolean; title: string; message: string; type: 'error' | 'success' | 'info' }>({
-    open: false,
-    title: '',
-    message: '',
-    type: 'info'
+export function CartView({ cart, remove, products, t, theme }: any) {
+  const cartWithTieredPrices = cart.map((item: CartItem) => {
+    const isKeychain = (item.name.toLowerCase().includes('llavero') || item.category.toLowerCase().includes('llavero') || item.id.includes('llavero') || item.name.toLowerCase().includes('pulpo') || item.name.toLowerCase().includes('harry potter'));
+    let priceAtQuantity = getPriceTier(item.quantity, item.price);
+    
+    if (isKeychain && item.quantity >= 20) {
+      priceAtQuantity = Math.min(priceAtQuantity, 1500); // Promo: 20 units x $1500 = $30,000
+    }
+    
+    return {
+      ...item,
+      priceAtQuantity
+    };
   });
-
-  const cartWithTieredPrices = cart.map((item: CartItem) => ({
-    ...item,
-    priceAtQuantity: getPriceTier(item.quantity, item.price)
-  }));
 
   const total = cartWithTieredPrices.reduce((acc: number, item: any) => acc + (item.priceAtQuantity * item.quantity), 0);
 
   const handleWhatsAppCheckout = () => {
-    const total = cartWithTieredPrices.reduce((acc: number, item: any) => acc + (item.priceAtQuantity * item.quantity), 0);
+    const totalValue = cartWithTieredPrices.reduce((acc: number, item: any) => acc + (item.priceAtQuantity * item.quantity), 0);
     
     let message = `*NUEVO PEDIDO - NOVA3D*\n\n`;
     message += `Hola! Me gustaría realizar el siguiente pedido:\n\n`;
@@ -39,10 +39,10 @@ export function CartView({ cart, remove, products, t, theme, user }: any) {
       message += `• *${item.name}*\n`;
       message += `  Cantidad: ${item.quantity}\n`;
       message += `  Precio Unit: $${item.priceAtQuantity.toLocaleString()}\n`;
-      message += `  Subtotal: $${(item.priceAtQuantity * item.quantity).toLocaleString()}\n\n`;
+      message += `  Subtotal: $${((item.priceAtQuantity * item.quantity)).toLocaleString()}\n\n`;
     });
     
-    message += `*TOTAL DEL PEDIDO: $${total.toLocaleString()}*\n\n`;
+    message += `*TOTAL DEL PEDIDO: $${totalValue.toLocaleString()}*\n\n`;
     message += `_Por favor, confírmenme los pasos para el pago y envío._`;
     
     const encodedMessage = encodeURIComponent(message);
@@ -196,14 +196,6 @@ export function CartView({ cart, remove, products, t, theme, user }: any) {
         </div>
       </div>
 
-      <AlertModal 
-        isOpen={alert.open}
-        onClose={() => setAlert({ ...alert, open: false })}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-        theme={theme}
-      />
       </div>
     </div>
   );
