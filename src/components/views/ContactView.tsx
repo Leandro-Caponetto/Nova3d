@@ -19,7 +19,7 @@ export function ContactView({ theme, t }: ContactViewProps) {
       setLoading(false);
       const formData = new FormData(e.target as HTMLFormElement);
       const message = formData.get('message');
-      const phoneNumber = "5491112345678";
+      const phoneNumber = "5491169442102";
       const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message as string)}`;
       window.open(whatsappUrl, '_blank');
     }, 1000);
@@ -35,7 +35,7 @@ export function ContactView({ theme, t }: ContactViewProps) {
             alt="World Map Silhouette" 
             className={cn(
               "w-[140%] max-w-none h-auto object-contain",
-              theme === 'dark' ? "invert brightness-[3] contrast-[0.7]" : "grayscale brightness-[0.7]"
+              theme === 'dark' ? "invert brightness-[3] contrast-[1.2]" : "grayscale brightness-[0.7]"
             )}
             referrerPolicy="no-referrer"
           />
@@ -80,7 +80,7 @@ export function ContactView({ theme, t }: ContactViewProps) {
                 </div>
                 <div>
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">{t.contactWA}</h4>
-                  <p className="text-sm font-black uppercase tracking-tight italic">+54 9 11 1234-5678</p>
+                  <p className="text-sm font-black uppercase tracking-tight italic">+54 9 11 6944-2102</p>
                 </div>
               </div>
 

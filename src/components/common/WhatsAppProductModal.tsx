@@ -15,7 +15,7 @@ interface WhatsAppProductModalProps {
 
 export function WhatsAppProductModal({ isOpen, onClose, product, t, theme, onOpenChat }: WhatsAppProductModalProps) {
   const [message, setMessage] = useState('');
-  const phoneNumber = '5491169442108'; // Format: country code + area code + number
+  const phoneNumber = '5491169442102'; // Format: country code + area code + number
 
   const handleSend = () => {
     if (!product) return;

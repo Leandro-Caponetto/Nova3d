@@ -240,7 +240,7 @@ export function QuoteView({ products = [], addToCart, theme }: QuoteViewProps) {
       `----------------------------------%0A` +
       `Hola, me interesa encargar esta cantidad con este tamaño.`;
     
-    window.open(`https://wa.me/5491112345678?text=${text}`, '_blank');
+    window.open(`https://wa.me/5491169442102?text=${text}`, '_blank');
   };
 
   return (

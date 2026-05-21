@@ -4,7 +4,8 @@ import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
 
 export function WhatsAppButton({ theme }: { theme: 'dark' | 'light' }) {
-  const phoneNumber = "5491112345678"; 
+  // Use a placeholder number, users can change it later
+  const phoneNumber = "5491169442102"; 
   const message = encodeURIComponent("Hola Nova3D! Quisiera consultar sobre un servicio de impresión.");
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
 
@@ -22,23 +23,14 @@ export function WhatsAppButton({ theme }: { theme: 'dark' | 'light' }) {
         "bg-[#25D366] text-white hover:bg-[#20ba5a] shadow-[0_15px_35px_rgba(37,211,102,0.3)]"
       )}
     >
-      {/* efecto hover */}
       <div className="absolute inset-0 bg-white/20 rounded-[24px] scale-0 group-hover:scale-100 transition-transform duration-500" />
       
-      {/* ICONOS */}
-      <div className="relative flex items-center justify-center">
-        
-        {/* círculo */}
-        <MessageCircle 
-          className="w-11 h-11 text-white fill-none" 
-          strokeWidth={1.5}
-        />
-
-        {/* teléfono centrado exacto */}
-        <Phone 
-          className="absolute top-1/2 left-1/2 w-5 h-5 text-white fill-current -translate-x-1/2 -translate-y-1/2" 
-        />
-      </div>
+      <img 
+        src="https://img.freepik.com/vector-premium/whatsapp-vector-logo-icono-logotipo-vector-redes-sociales_901408-402.jpg?semt=ais_hybrid&w=740&q=80" 
+        alt="WhatsApp"
+        className="w-2/3 h-2/3 object-contain drop-shadow-md rounded-[12px]"
+        referrerPolicy="no-referrer"
+      />
       
       {/* Tooltip */}
       <div className={cn(
