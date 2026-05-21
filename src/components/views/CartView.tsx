@@ -46,7 +46,7 @@ export function CartView({ cart, remove, products, t, theme }: any) {
     message += `_Por favor, confírmenme los pasos para el pago y envío._`;
     
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/5491169442102?text=${encodedMessage}`, '_blank');
+    window.open(`https://wa.me/5491169442108?text=${encodedMessage}`, '_blank');
   };
 
   if (cart.length === 0) {

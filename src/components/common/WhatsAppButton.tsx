@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils';
 
 export function WhatsAppButton({ theme }: { theme: 'dark' | 'light' }) {
   // Use a placeholder number, users can change it later
-  const phoneNumber = "5491169442102"; 
+  const phoneNumber = "5491169442108"; 
   const message = encodeURIComponent("Hola Nova3D! Quisiera consultar sobre un servicio de impresión.");
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
 
