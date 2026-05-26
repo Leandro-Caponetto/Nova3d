@@ -1,10 +1,11 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { ChevronRight, Sparkles, ArrowRight, MessageCircle, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ChevronRight, Sparkles, ArrowRight, MessageCircle, Check, Megaphone, ExternalLink } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Stat } from '../common/Stat';
 import { TestimonialsSection } from './TestimonialsSection';
 import { Product } from '../../types';
+import { supabase } from '../../lib/supabase';
 
 export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhatsApp, onSubscribe }: { 
   onExplore: () => void, 
@@ -13,30 +14,44 @@ export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhats
   theme: 'dark' | 'light', 
   user: any, 
   products: Product[], 
-  onWhatsApp: (p: Product) => void,
+  onWhatsApp: (p: Product | any) => void,
   onSubscribe: (plan: any) => void
 }) {
+  const [news, setNews] = useState<any[]>([]);
   const featured = products?.slice(0, 3) || [];
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      const { data } = await supabase
+        .from('news_items')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (data) setNews(data);
+    };
+    fetchNews();
+  }, []);
+
+  const handleWhatsAppNews = (item: any) => {
+    const phoneNumber = "5491169442108";
+    const text = encodeURIComponent(`Hola! Vi la novedad "${item.title}" y me interesa consultar por más info.`);
+    window.open(`https://wa.me/${phoneNumber}?text=${text}`, '_blank');
+  };
 
   return (
     <div className="flex flex-col">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="relative min-h-[90vh] flex flex-col items-center justify-center overflow-hidden"
+        className="relative min-h-[85vh] flex flex-col items-center justify-center overflow-hidden"
       >
-        {/* GIF Background Layer */}
-        <div className="absolute inset-0 z-0 bg-black">
-          <img 
-            src="https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif"
-            alt="3D Printing Background"
-            className="absolute inset-0 w-full h-full object-cover opacity-30 grayscale contrast-125"
-            referrerPolicy="no-referrer"
-          />
-          {/* Overlays for depth and readability */}
-          <div className={cn("absolute inset-0 bg-gradient-to-b via-transparent", 
-            theme === 'dark' ? "from-black via-black/40 to-[#050505]" : "from-white/20 to-[#fdfdfc]")} />
-          <div className="absolute inset-0 technical-grid opacity-20" />
+        {/* Background Layer (Cleaned up, GIF removed) */}
+        <div className={cn("absolute inset-0 z-0", theme === 'dark' ? "bg-black" : "bg-white")}>
+          <div className={cn("absolute inset-0", 
+            theme === 'dark' 
+              ? "bg-[radial-gradient(circle_at_50%_50%,rgba(245,158,11,0.05),transparent_50%)]" 
+              : "bg-[radial-gradient(circle_at_50%_50%,rgba(245,158,11,0.03),transparent_50%)]"
+          )} />
+          <div className="absolute inset-0 technical-grid opacity-10" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 py-32 text-center relative z-10">
@@ -82,6 +97,82 @@ export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhats
           </div>
         </div>
       </motion.div>
+
+      {/* Novedades Section */}
+      <AnimatePresence>
+        {news.length > 0 && (
+          <section className="py-24 relative">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-16">
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
+                      <Megaphone className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-primary text-[10px] font-black uppercase tracking-[0.5em]">NEWS_FLASH</span>
+                  </div>
+                  <h2 className="text-5xl md:text-7xl font-black tracking-tighter uppercase italic leading-[0.9]">
+                    Últimas <br/> <span className="text-zinc-500 font-light">Novedades</span>
+                  </h2>
+                </div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-3 bg-zinc-500/5 px-6 py-3 rounded-2xl border border-zinc-500/10">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  Actualizado hoy
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                {news.map((item, idx) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: idx * 0.1 }}
+                    viewport={{ once: true }}
+                    className={cn(
+                      "group relative rounded-[3rem] overflow-hidden border transition-all duration-500",
+                      theme === 'dark' 
+                        ? "bg-zinc-900 border-white/5 hover:border-primary/30" 
+                        : "bg-white border-zinc-100 shadow-xl shadow-zinc-200/50 hover:border-primary/30"
+                    )}
+                  >
+                    <div className="aspect-[4/3] relative overflow-hidden">
+                      <img 
+                        src={item.image_url} 
+                        alt={item.title} 
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                      
+                      {/* Badge */}
+                      <div className="absolute top-6 left-6 z-10 px-3 py-1 bg-primary text-white rounded-lg text-[8px] font-black tracking-widest uppercase shadow-lg shadow-primary/20">
+                        NUEVO
+                      </div>
+                    </div>
+
+                    <div className="p-10">
+                      <h4 className="text-2xl font-black italic uppercase tracking-tighter mb-4">{item.title}</h4>
+                      <p className={cn("text-sm font-medium mb-8 leading-relaxed line-clamp-3",
+                        theme === 'dark' ? "text-zinc-500" : "text-zinc-500")}>
+                        {item.description}
+                      </p>
+                      
+                      <button 
+                        onClick={() => handleWhatsAppNews(item)}
+                        className="w-full py-5 rounded-2xl bg-emerald-500 text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all hover:-translate-y-1 active:scale-95"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        {item.button_text || 'CONSULTAR POR WHATSAPP'}
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+      </AnimatePresence>
 
       {/* Stats Section */}
       <div className="max-w-7xl mx-auto px-4 w-full">
