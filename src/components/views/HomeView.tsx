@@ -101,71 +101,125 @@ export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhats
       {/* Novedades Section */}
       <AnimatePresence>
         {news.length > 0 && (
-          <section className="py-24 relative">
-            <div className="max-w-7xl mx-auto px-4">
-              <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-16">
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
-                      <Megaphone className="w-4 h-4 text-primary" />
-                    </div>
-                    <span className="text-primary text-[10px] font-black uppercase tracking-[0.5em]">NEWS_FLASH</span>
+          <section className="py-24 relative overflow-hidden">
+            {/* Background Glows */}
+            <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
+            <div className="absolute bottom-0 right-1/4 translate-x-1/2 w-[300px] h-[300px] bg-emerald-500/5 blur-[100px] rounded-full pointer-events-none" />
+
+            <div className="max-w-7xl mx-auto px-4 relative z-10">
+              <div className="flex flex-col items-center text-center mb-20">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="flex items-center gap-3 mb-6"
+                >
+                  <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
+                    <Megaphone className="w-5 h-5 text-primary" />
                   </div>
-                  <h2 className="text-5xl md:text-7xl font-black tracking-tighter uppercase italic leading-[0.9]">
-                    Últimas <br/> <span className="text-zinc-500 font-light">Novedades</span>
-                  </h2>
-                </div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-3 bg-zinc-500/5 px-6 py-3 rounded-2xl border border-zinc-500/10">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  Actualizado hoy
-                </div>
+                  <span className="text-primary text-[10px] font-black uppercase tracking-[0.5em]">SYSTEM_BROADCAST_ACTIVE</span>
+                </motion.div>
+                
+                <motion.h2 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  viewport={{ once: true }}
+                  className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-[0.85] mb-6"
+                >
+                  Nuevas <span className="text-zinc-500 font-light italic">Dimensiones</span>
+                </motion.h2>
+                
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  viewport={{ once: true }}
+                  className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-bold text-emerald-500 uppercase tracking-widest"
+                >
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                  Sincronización en tiempo real
+                </motion.div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              <div className={cn(
+                "grid gap-12 max-w-6xl mx-auto",
+                news.length === 1 ? "grid-cols-1" : 
+                news.length === 2 ? "grid-cols-1 md:grid-cols-2" : 
+                "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+              )}>
                 {news.map((item, idx) => (
                   <motion.div
                     key={item.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: idx * 0.1 }}
+                    initial={{ opacity: 0, y: 40 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                     viewport={{ once: true }}
                     className={cn(
-                      "group relative rounded-[3rem] overflow-hidden border transition-all duration-500",
+                      "group relative flex flex-col rounded-[3.5rem] overflow-hidden border transition-all duration-700",
                       theme === 'dark' 
-                        ? "bg-zinc-900 border-white/5 hover:border-primary/30" 
-                        : "bg-white border-zinc-100 shadow-xl shadow-zinc-200/50 hover:border-primary/30"
+                        ? "bg-zinc-900/40 backdrop-blur-md border-white/5 hover:border-primary/40 hover:bg-zinc-900/60" 
+                        : "bg-white border-zinc-100 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] hover:border-primary/40 hover:shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1)]",
+                      news.length === 1 ? "max-w-3xl mx-auto" : ""
                     )}
                   >
-                    <div className="aspect-[4/3] relative overflow-hidden">
+                    {/* Visual Container */}
+                    <div className="aspect-[16/10] relative overflow-hidden bg-zinc-950">
                       <img 
                         src={item.image_url} 
                         alt={item.title} 
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-110"
                         referrerPolicy="no-referrer"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                       
-                      {/* Badge */}
-                      <div className="absolute top-6 left-6 z-10 px-3 py-1 bg-primary text-white rounded-lg text-[8px] font-black tracking-widest uppercase shadow-lg shadow-primary/20">
-                        NUEVO
+                      {/* Artistic Overlays */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-700 group-hover:opacity-40" />
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-700 technical-grid" />
+                      
+                      {/* Top Badge */}
+                      <div className="absolute top-8 left-8 z-10 flex items-center gap-3">
+                        <div className="px-5 py-1.5 bg-primary/90 backdrop-blur-md text-white rounded-full text-[9px] font-black tracking-[0.2em] uppercase shadow-2xl">
+                          Novedad_Lanzamiento
+                        </div>
                       </div>
                     </div>
 
-                    <div className="p-10">
-                      <h4 className="text-2xl font-black italic uppercase tracking-tighter mb-4">{item.title}</h4>
-                      <p className={cn("text-sm font-medium mb-8 leading-relaxed line-clamp-3",
-                        theme === 'dark' ? "text-zinc-500" : "text-zinc-500")}>
+                    {/* Content Container */}
+                    <div className="p-10 md:p-14 relative z-10">
+                      {/* Subtle category label if we had one, but using title/desc */}
+                      <div className="flex items-center justify-between mb-6">
+                        <span className="text-primary text-[10px] font-black uppercase tracking-[0.3em]">Protocolo_Nuevo</span>
+                        <span className="text-zinc-500 text-[9px] font-mono tracking-widest">{new Date(item.created_at).toLocaleDateString()}</span>
+                      </div>
+
+                      <h4 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter mb-4 leading-none group-hover:text-primary transition-colors">
+                        {item.title}
+                      </h4>
+                      
+                      <p className={cn("text-base font-medium mb-10 leading-relaxed line-clamp-4",
+                        theme === 'dark' ? "text-zinc-500" : "text-zinc-400")}>
                         {item.description}
                       </p>
                       
                       <button 
                         onClick={() => handleWhatsAppNews(item)}
-                        className="w-full py-5 rounded-2xl bg-emerald-500 text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all hover:-translate-y-1 active:scale-95"
+                        className="w-full relative overflow-hidden group/btn"
                       >
-                        <MessageCircle className="w-5 h-5" />
-                        {item.button_text || 'CONSULTAR POR WHATSAPP'}
+                        <div className="absolute inset-0 bg-emerald-500 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500" />
+                        <div className={cn(
+                          "relative z-10 py-5 rounded-2xl border-2 font-black text-[10px] uppercase tracking-[0.25em] flex items-center justify-center gap-4 transition-all duration-500",
+                          theme === 'dark' 
+                            ? "bg-zinc-800/50 border-white/5 text-white group-hover/btn:text-white group-hover/btn:border-transparent" 
+                            : "bg-zinc-50 border-zinc-100 text-zinc-900 group-hover/btn:text-white group-hover/btn:border-transparent"
+                        )}>
+                          <MessageCircle className="w-5 h-5 transition-transform group-hover/btn:scale-110 group-hover/btn:rotate-12" />
+                          {item.button_text || 'CONSULTAR_DISPONIBILIDAD'}
+                        </div>
                       </button>
                     </div>
+
+                    {/* Corner Accent */}
+                    <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-primary/20 rotate-45 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                   </motion.div>
                 ))}
               </div>
