@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary-DEFAULT: #f59e0b; /* Amber 500 */
-  --color-primary-light: #fbbf24;
-  --color-primary-dark: #d97706;
+  --color-primary-DEFAULT: #f97316; /* Orange 500 */
+  --color-primary-light: #fb923c;
+  --color-primary-dark: #ea580c;
   
   --color-surface-base: var(--surface);
   --color-bg-base: var(--background);
@@ -34,16 +34,22 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    @apply antialiased selection:bg-amber-500/30 transition-colors duration-500;
+    @apply antialiased selection:bg-orange-500/30 transition-colors duration-500;
+  }
+
+  @media (pointer: fine) {
+    * {
+      cursor: none !important;
+    }
   }
 }
 
 .glow-primary {
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
 }
 
 .glow-text {
-  text-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+  text-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
 }
 
 .technical-grid {
@@ -60,10 +66,10 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(245, 158, 11, 0.2);
+  background: rgba(249, 115, 22, 0.2);
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(245, 158, 11, 0.4);
+  background: rgba(249, 115, 22, 0.4);
 }

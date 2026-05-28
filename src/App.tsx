@@ -29,6 +29,9 @@ import { CheckoutView } from './components/views/CheckoutView';
 import { WhatsAppButton } from './components/common/WhatsAppButton';
 import { WhatsAppProductModal } from './components/common/WhatsAppProductModal';
 import { ProductChatModal } from './components/chat/ProductChatModal';
+import { CustomCursor } from './components/common/CustomCursor';
+import { TechnicalBackground } from './components/common/TechnicalBackground';
+import { SmokeTrail } from './components/common/SmokeTrail';
 
 export default function App() {
   const [lang, setLang] = useState<Language>('es');
@@ -245,6 +248,9 @@ export default function App() {
         {/* SubscriptionModal is deprecated by full-page views */}
 
         <WhatsAppButton theme={theme} />
+        <CustomCursor theme={theme} />
+        <SmokeTrail theme={theme} />
+        <TechnicalBackground theme={theme} />
 
         <Footer t={t} theme={theme} />
       </div>
