@@ -4,6 +4,7 @@ import { ChevronRight, Sparkles, ArrowRight, MessageCircle, Check, Megaphone, Ex
 import { cn } from '../../lib/utils';
 import { Stat } from '../common/Stat';
 import { TestimonialsSection } from './TestimonialsSection';
+import { HeroScene } from '../home/HeroScene';
 import { Product } from '../../types';
 import { supabase } from '../../lib/supabase';
 
@@ -46,6 +47,7 @@ export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhats
       >
         {/* Background Layer (Cleaned up, GIF removed) */}
         <div className={cn("absolute inset-0 z-0", theme === 'dark' ? "bg-black" : "bg-white")}>
+          <HeroScene theme={theme} />
           <div className={cn("absolute inset-0", 
             theme === 'dark' 
               ? "bg-[radial-gradient(circle_at_50%_50%,rgba(245,158,11,0.05),transparent_50%)]" 
