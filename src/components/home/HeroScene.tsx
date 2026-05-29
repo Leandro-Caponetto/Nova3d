@@ -44,56 +44,111 @@ function StylizedSatellite({ theme }: { theme: 'dark' | 'light' }) {
 
   return (
     <group ref={groupRef} scale={isMobile ? 0.3 : 0.5}>
-      {/* BODY */}
-      <mesh>
-        <boxGeometry args={[0.8, 0.8, 0.8]} />
-        <meshStandardMaterial
-          color={theme === 'dark'
-            ? '#0ea5e9'
-            : '#0284c7'}
-          metalness={0.8}
-          roughness={0.2}
-        />
-      </mesh>
-
-      {/* SOLAR PANELS */}
-      <group ref={solarPanelRef}>
-        <mesh position={[1.4, 0, 0]}>
-          <planeGeometry args={[1.8, 0.6]} />
-          <meshStandardMaterial
-            color="#334155"
-            emissive="#0ea5e9"
-            emissiveIntensity={0.5}
-            side={THREE.DoubleSide}
-          />
+      {/* MAIN BODY SEGMENTS - Multi-part cylinder based on image */}
+      <group rotation={[0, 0, Math.PI / 2]}>
+        {/* Main large cylinder */}
+        <mesh position={[0, 0, 0]}>
+          <cylinderGeometry args={[0.5, 0.45, 1.2, 32]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.6} roughness={0.3} />
         </mesh>
-        <mesh position={[-1.4, 0, 0]}>
-          <planeGeometry args={[1.8, 0.6]} />
-          <meshStandardMaterial
-            color="#334155"
-            emissive="#0ea5e9"
-            emissiveIntensity={0.5}
-            side={THREE.DoubleSide}
-          />
+        
+        {/* Top white section */}
+        <mesh position={[0.8, 0, 0]}>
+          <cylinderGeometry args={[0.4, 0.5, 0.4, 32]} />
+          <meshStandardMaterial color="#f8fafc" metalness={0.4} roughness={0.2} />
+        </mesh>
+
+        {/* Bottom narrower section */}
+        <mesh position={[-0.8, 0, 0]}>
+          <cylinderGeometry args={[0.3, 0.3, 0.6, 32]} />
+          <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.1} />
+        </mesh>
+
+        {/* Mid collar */}
+        <mesh position={[0.3, 0, 0]}>
+          <cylinderGeometry args={[0.55, 0.55, 0.1, 32]} />
+          <meshStandardMaterial color="#64748b" metalness={0.9} roughness={0.1} />
         </mesh>
       </group>
 
-      {/* ANTENNA */}
-      <mesh
-        position={[0, 0.6, 0]}
-        rotation={[-Math.PI / 4, 0, 0]}
-      >
-        <coneGeometry args={[0.3, 0.4, 32]} />
-        <meshStandardMaterial color="#94a3b8" />
-      </mesh>
+      {/* SOLAR PANELS - Rectangular with blue grid pattern */}
+      <group ref={solarPanelRef}>
+        <group position={[2.5, 0, 0]}>
+          <mesh>
+            <boxGeometry args={[3, 1, 0.05]} />
+            <meshStandardMaterial 
+              color="#1e3a8a" 
+              emissive="#1e40af" 
+              emissiveIntensity={0.4} 
+              metalness={0.9} 
+              roughness={0.1} 
+            />
+          </mesh>
+          {/* Panel Grid Lines */}
+          {[1, 2].map((i) => (
+            <mesh key={`h-${i}`} position={[i - 1.5, 0, 0.03]}>
+              <boxGeometry args={[0.02, 1, 0.01]} />
+              <meshBasicMaterial color="#60a5fa" transparent opacity={0.5} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0, 0.03]}>
+            <boxGeometry args={[3, 0.02, 0.01]} />
+            <meshBasicMaterial color="#60a5fa" transparent opacity={0.5} />
+          </mesh>
+        </group>
 
-      {/* SIGNAL */}
-      <mesh position={[0, 0.4, 0.5]}>
-        <sphereGeometry args={[0.05, 16, 16]} />
+        <group position={[-2.5, 0, 0]}>
+          <mesh>
+            <boxGeometry args={[3, 1, 0.05]} />
+            <meshStandardMaterial 
+              color="#1e3a8a" 
+              emissive="#1e40af" 
+              emissiveIntensity={0.4} 
+              metalness={0.9} 
+              roughness={0.1} 
+            />
+          </mesh>
+          {/* Panel Grid Lines */}
+          {[1, 2].map((i) => (
+            <mesh key={`h-neg-${i}`} position={[i - 1.5, 0, 0.03]}>
+              <boxGeometry args={[0.02, 1, 0.01]} />
+              <meshBasicMaterial color="#60a5fa" transparent opacity={0.5} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0, 0.03]}>
+            <boxGeometry args={[3, 0.02, 0.01]} />
+            <meshBasicMaterial color="#60a5fa" transparent opacity={0.5} />
+          </mesh>
+        </group>
+      </group>
+
+      {/* MAIN TOP DISH - White large disk */}
+      <group position={[0, 1.2, 0]} rotation={[0, 0, 0]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.7, 0.7, 0.1, 32]} />
+          <meshStandardMaterial color="#f1f5f9" />
+        </mesh>
+        <mesh position={[0, 0.1, 0]}>
+          <sphereGeometry args={[0.6, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#f8fafc" />
+        </mesh>
+      </group>
+
+      {/* SIDE SMALL DISHES */}
+      <group position={[0.6, -0.2, 0.4]} rotation={[0, Math.PI/4, 0]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.2, 0.2, 0.05, 16]} />
+          <meshStandardMaterial color="#cbd5e1" />
+        </mesh>
+      </group>
+
+      {/* SIGNAL BEACON */}
+      <mesh position={[0, 0.4, 0.7]}>
+        <sphereGeometry args={[0.06, 16, 16]} />
         <meshStandardMaterial
           color={color}
           emissive={color}
-          emissiveIntensity={2}
+          emissiveIntensity={3}
         />
       </mesh>
     </group>
