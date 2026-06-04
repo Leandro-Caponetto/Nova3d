@@ -52,6 +52,68 @@
   text-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
 }
 
+.text-3d-steel-dark {
+  color: #fafafa;
+  text-shadow:
+    0 1px 0 #e4e4e7,
+    0 2px 0 #d4d4d8,
+    0 3px 0 #a1a1aa,
+    0 4px 0 #71717a,
+    0 5px 0 #52525b,
+    0 6px 0 #3f3f46,
+    0 7px 0 #27272a,
+    0 8px 0 #18181b,
+    0 9px 0 #09090b,
+    0 10px 0 #000000,
+    0 11px 1px rgba(0,0,0,0.9),
+    0 18px 36px rgba(0,0,0,0.9);
+}
+
+.text-3d-steel-light {
+  color: #18181b;
+  text-shadow:
+    0 1px 0 #3f3f46,
+    0 2px 0 #52525b,
+    0 3px 0 #71717a,
+    0 4px 0 #a1a1aa,
+    0 5px 0 #d4d4d8,
+    0 6px 0 #e4e4e7,
+    0 7px 1px rgba(0,0,0,0.15),
+    0 12px 24px rgba(0,0,0,0.15);
+}
+
+.text-3d-cyan-dark {
+  color: #e0f2fe;
+  text-shadow:
+    0 1px 0 #bae6fd,
+    0 2px 0 #7dd3fc,
+    0 3px 0 #38bdf8,
+    0 4px 0 #0ea5e9,
+    0 5px 0 #0284c7,
+    0 6px 0 #0369a1,
+    0 7px 0 #075985,
+    0 8px 0 #0c4a6e,
+    0 9px 0 #082f49,
+    0 10px 0 #021a2b,
+    0 11px 1px rgba(0,0,0,0.9),
+    0 12px 1px rgba(0,0,0,0.955),
+    0 0 20px rgba(14, 165, 233, 0.45),
+    0 18px 36px rgba(14, 165, 233, 0.35);
+}
+
+.text-3d-cyan-light {
+  color: #0369a1;
+  text-shadow:
+    0 1px 0 #075985,
+    0 2px 0 #0c4a6e,
+    0 3px 0 #0a3a57,
+    0 4px 0 #05263b,
+    0 5px 0 #021422,
+    0 6px 1px rgba(0,0,0,0.15),
+    0 0 15px rgba(14, 165, 233, 0.25),
+    0 12px 24px rgba(14, 165, 233, 0.2);
+}
+
 .technical-grid {
   background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
   background-size: 24px 24px;

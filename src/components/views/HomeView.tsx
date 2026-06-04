@@ -70,9 +70,19 @@ export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhats
             </span>
           </motion.div>
           
-          <h1 className="text-6xl md:text-[140px] font-light tracking-tighter mb-10 leading-[0.82] uppercase relative transition-all">
-            {t.heroTitle1} <br />
-            <span className="font-black italic text-primary drop-shadow-[0_0_30px_rgba(245,158,11,0.5)] glow-text animate-pulse">{t.heroTitle2}</span>
+          <h1 className="text-5xl md:text-[120px] lg:text-[140px] tracking-tighter mb-10 leading-[0.85] uppercase relative transition-all">
+            <span className={cn(
+              "font-light tracking-tight block mb-2",
+              theme === 'dark' ? "text-3d-steel-dark" : "text-3d-steel-light"
+            )}>
+              {t.heroTitle1}
+            </span>
+            <span className={cn(
+              "font-black italic block",
+              theme === 'dark' ? "text-3d-cyan-dark" : "text-3d-cyan-light"
+            )}>
+              {t.heroTitle2}
+            </span>
           </h1>
           
           <p className={cn("max-w-2xl mx-auto text-base mb-16 tracking-wide leading-relaxed font-medium transition-colors",

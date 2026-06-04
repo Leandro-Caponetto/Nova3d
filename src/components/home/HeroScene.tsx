@@ -298,7 +298,7 @@ export function HeroScene({
   theme: 'dark' | 'light'
 }) {
   return (
-    <div className="w-full h-full absolute inset-0 pointer-events-none opacity-60 overflow-hidden">
+    <div className="w-full h-full absolute inset-0 pointer-events-none opacity-85 overflow-hidden">
       <Canvas
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
