@@ -5,6 +5,7 @@ import { cn } from '../../lib/utils';
 import { Stat } from '../common/Stat';
 import { TestimonialsSection } from './TestimonialsSection';
 import { HeroScene } from '../home/HeroScene';
+import { BlogSection } from '../home/BlogSection';
 import { Product } from '../../types';
 import { supabase } from '../../lib/supabase';
 
@@ -417,6 +418,16 @@ export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhats
           </motion.div>
         </div>
       </section>
+
+      {/* Blog & SEO Guías 3D Section */}
+      <BlogSection 
+        theme={theme} 
+        onWhatsApp={(customMsg) => {
+          const phoneNumber = "5491169442108";
+          const text = encodeURIComponent(customMsg || "Hola! Me interesa consultar por más info sobre impresión 3D.");
+          window.open(`https://wa.me/${phoneNumber}?text=${text}`, '_blank');
+        }} 
+      />
       
       {/* Raffle & Subscription Section */}
       <section className="py-32 relative overflow-hidden bg-black">

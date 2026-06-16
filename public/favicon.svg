@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <!-- Cyan to Blue Cyber Gradient -->
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9" />
+      <stop offset="100%" stop-color="#0369a1" />
+    </linearGradient>
+    <!-- Accent Orange/Amber Gradient -->
+    <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+    <!-- Background Dark Glow -->
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Smooth rounded square background wrapper -->
+  <rect x="4" y="4" width="120" height="120" rx="32" fill="url(#bgGlow)" stroke="#1e293b" stroke-width="4"/>
+
+  <!-- Styled hexagonal 3D wireframe / layered structure -->
+  <!-- Layer 1: Base Platform shadow -->
+  <path d="M 64,102 L 100,81 L 64,60 L 28,81 Z" fill="#0f172a" opacity="0.6" />
+  
+  <!-- Layer 2: 3D bounding box prism -->
+  <path d="M 64,22 L 100,43 L 100,81 L 64,102 L 28,81 L 28,43 Z" fill="none" stroke="url(#cyanGrad)" stroke-width="3" stroke-linejoin="round" opacity="0.3"/>
+
+  <!-- Layer 3: Dynamic 3D model extrusion (Prism/Letter N styled in isometric space) -->
+  <!-- Left Column -->
+  <path d="M 36,44 L 52,35 L 52,73 L 36,82 Z" fill="url(#cyanGrad)" />
+  <!-- Diagonal connector -->
+  <path d="M 52,35 L 76,73 L 76,82 L 52,44 Z" fill="url(#cyanGrad)" opacity="0.85" />
+  <!-- Right Column -->
+  <path d="M 76,44 L 92,35 L 92,73 L 76,82 Z" fill="url(#cyanGrad)" />
+
+  <!-- Layer 4: Extruder Nozzle active printing point (Orange) -->
+  <path d="M 64,14 L 69,25 L 59,25 Z" fill="url(#orangeGrad)" />
+  <circle cx="64" cy="27" r="4.5" fill="#f97316" />
+  <circle cx="64" cy="27" r="1.5" fill="#fafafa" />
+
+  <!-- Tiny Laser Beam path from nozzle down to print level -->
+  <line x1="64" y1="27" x2="64" y2="58" stroke="#f97316" stroke-width="2" stroke-dasharray="2 3" opacity="0.9" />
+
+  <!-- Animated-like neon dots around -->
+  <circle cx="36" cy="44" r="2" fill="#38bdf8" />
+  <circle cx="92" cy="73" r="2" fill="#38bdf8" />
+  <circle cx="64" cy="102" r="2.5" fill="#f97316" />
+</svg>

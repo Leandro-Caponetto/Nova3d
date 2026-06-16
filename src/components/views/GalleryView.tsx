@@ -492,9 +492,9 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Infinite scroll observer for mobile
+  // Infinite scroll observer for all devices
   React.useEffect(() => {
-    if (!isMobile || currentPage >= totalPages) return;
+    if (currentPage >= totalPages) return;
 
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
@@ -504,57 +504,16 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
 
     if (observerRef.current) observer.observe(observerRef.current);
     return () => observer.disconnect();
-  }, [isMobile, currentPage, totalPages]);
+  }, [currentPage, totalPages]);
 
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, filteredProducts.length, activeFilters]);
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentProducts = isMobile 
-    ? filteredProducts.slice(0, currentPage * itemsPerPage)
-    : filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+  const currentProducts = filteredProducts.slice(0, currentPage * itemsPerPage);
 
   const currentDetailPrice = selected ? getPriceTier(detailQuantity, selected.price) : 0;
   const detailDiscount = selected ? getDiscountLabel(detailQuantity) : null;
-
-  const Pagination = () => {
-    if (totalPages <= 1 || isMobile) return null;
-    return (
-      <div className="flex items-center gap-6 bg-black/5 dark:bg-white/5 p-2 rounded-[24px] border border-zinc-500/10">
-        <button 
-          disabled={currentPage === 1}
-          onClick={() => {
-            setCurrentPage(prev => prev - 1);
-            window.scrollTo({ top: 300, behavior: 'smooth' });
-          }}
-          className={cn("w-14 h-14 rounded-2xl border flex items-center justify-center transition-all disabled:opacity-10 text-lg shadow-lg",
-            theme === 'dark' ? "border-white/10 hover:bg-primary hover:text-white" : "border-zinc-200 hover:bg-primary hover:text-white")}
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-        
-        <div className="flex flex-col items-center gap-1 px-4">
-          <span className="text-[12px] font-black uppercase tracking-[0.3em] text-primary italic leading-none">PÁGINA</span>
-          <span className={cn("text-2xl font-black italic tracking-tighter leading-none", theme === 'dark' ? "text-white" : "text-black")}>
-            {currentPage} <span className="text-zinc-500 text-base">/ {totalPages}</span>
-          </span>
-        </div>
-
-        <button 
-          disabled={currentPage === totalPages}
-          onClick={() => {
-            setCurrentPage(prev => prev + 1);
-            window.scrollTo({ top: 300, behavior: 'smooth' });
-          }}
-          className={cn("w-14 h-14 rounded-2xl border flex items-center justify-center transition-all disabled:opacity-10 text-lg shadow-lg",
-            theme === 'dark' ? "border-white/10 hover:bg-primary hover:text-white" : "border-zinc-200 hover:bg-primary hover:text-white")}
-        >
-          <ChevronRight className="w-6 h-6" />
-        </button>
-      </div>
-    );
-  };
 
   const resetFilters = () => {
     setActiveFilters({
@@ -621,8 +580,6 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
             </div>
           </div>
         </div>
-        
-        <Pagination />
       </div>
 
       <div className="flex flex-col md:flex-row gap-8">
@@ -780,18 +737,18 @@ export function GalleryView({ products, addToCart, t, theme, onWhatsApp, searchQ
             </AnimatePresence>
           </div>
 
-          {/* Bottom Pagination & Mobile Observer */}
-          <div className="mt-20 flex justify-center pb-20">
-            {isMobile ? (
-              currentPage < totalPages && (
-                <div ref={observerRef} className="flex flex-col items-center gap-4 py-10">
-                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 animate-pulse">CARGANDO_PIEZAS...</span>
-                </div>
-              )
-            ) : (
-              <Pagination />
-            )}
+          {/* Bottom Observer for Infinite Scroll */}
+          <div className="mt-20 flex flex-col items-center justify-center pb-20">
+            {currentPage < totalPages ? (
+              <div ref={observerRef} className="flex flex-col items-center gap-4 py-10">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 animate-pulse">CARGANDO_PIEZAS...</span>
+              </div>
+            ) : filteredProducts.length > 0 ? (
+              <div className="text-zinc-500 text-xs font-mono py-10 tracking-[0.2em] uppercase">
+                // FIN_DEL_CATÁLOGO //
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
