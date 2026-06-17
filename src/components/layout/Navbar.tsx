@@ -26,6 +26,7 @@ export function Navbar({
   const navLinks = [
     { id: 'home', label: t.home },
     { id: 'gallery', label: t.catalog },
+    { id: 'community', label: t.community },
     { id: 'quote', label: t.quote },
     { id: 'contact', label: t.contact },
     ...(isAdmin ? [{ id: 'admin', label: t.admin }] : []),
@@ -39,39 +40,11 @@ export function Navbar({
           <div className="flex items-center gap-3 cursor-pointer group flex-shrink-0" onClick={() => setActiveTab('home')}>
             <Nova3DLogo theme={theme} />
             <span className={cn("text-2xl font-black tracking-tighter uppercase italic hidden sm:inline", theme === 'dark' ? "text-white" : "text-black")}>
-              NOVA<span className="text-[#f59e0b] drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] transition-colors group-hover:text-primary-light">3D</span>
+              NOVA<span className="text-primary glow-text transition-all group-hover:text-primary-light">3D</span>
             </span>
           </div>
 
-          {/* Search Bar - Hidden on mobile */}
-          <div className="hidden md:flex flex-grow max-w-md mx-4 pointer-events-auto">
-            <div className="relative group w-full">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-primary transition-colors" />
-              <input 
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (activeTab !== 'gallery' && e.target.value.length > 0) {
-                    setActiveTab('gallery');
-                  }
-                }}
-                placeholder={t.searchPlaceholder}
-                className={cn(
-                  "w-full bg-zinc-500/5 border border-zinc-500/10 rounded-2xl py-2.5 pl-11 pr-11 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all",
-                  theme === 'dark' ? "text-white placeholder:text-zinc-600" : "text-black placeholder:text-zinc-400"
-                )}
-              />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-primary transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          </div>
+
           
           <div className="hidden lg:flex items-center gap-10 text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 flex-shrink-0">
             {navLinks.map((link) => (
@@ -254,6 +227,61 @@ export function Navbar({
         </div>
       </div>
 
+      {/* Sub-Navbar containing Search and Social Media Integration */}
+      <div className={cn("border-b pointer-events-auto transition-all", 
+        theme === 'dark' 
+          ? "bg-bg-base/90 backdrop-blur-md border-white/5" 
+          : "bg-bg-base/90 backdrop-blur-md border-zinc-200"
+      )}>
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+          <div className="relative group w-full max-w-lg">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-primary transition-colors" />
+            <input 
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (activeTab !== 'gallery' && e.target.value.length > 0) {
+                  setActiveTab('gallery');
+                }
+              }}
+              placeholder={t.searchPlaceholder}
+              className={cn(
+                "w-full bg-zinc-500/5 border border-zinc-500/10 rounded-xl py-2 pl-11 pr-11 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all",
+                theme === 'dark' ? "text-white placeholder:text-zinc-600" : "text-black placeholder:text-zinc-400"
+              )}
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-primary transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1">
+            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-primary/10 rounded-xl transition-all text-zinc-500 hover:text-primary hover:scale-110">
+              <Facebook className="w-4 h-4" />
+            </a>
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-primary/10 rounded-xl transition-all text-zinc-500 hover:text-primary hover:scale-110">
+              <Instagram className="w-4 h-4" />
+            </a>
+            <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-primary/10 rounded-xl transition-all text-zinc-500 hover:text-primary hover:scale-110">
+              <TikTokIcon />
+            </a>
+            <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-primary/10 rounded-xl transition-all text-zinc-500 hover:text-primary hover:scale-110">
+              <TelegramIcon />
+            </a>
+            <div className="w-px h-4 bg-zinc-500/20 mx-1.5" />
+            <a href="mailto:caponettopeppers@gmail.com" className="p-2 hover:bg-primary/10 rounded-xl transition-all text-zinc-500 hover:text-primary hover:scale-110">
+              <Mail className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* Mobile Menu Dropdown */}
       <AnimatePresence>
         {isMobileMenuOpen && (
@@ -304,35 +332,7 @@ export function Navbar({
         )}
       </AnimatePresence>
 
-      {/* Floating social links below navbar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 pb-2 pointer-events-auto">
-        <div className="flex justify-center">
-          <motion.div 
-            initial={{ y: -10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className={cn("flex items-center gap-1 p-1 backdrop-blur-md border rounded-full shadow-lg transition-all",
-              theme === 'dark' ? "bg-black/30 border-white/5 shadow-black/50" : "bg-white/40 border-zinc-200/50 shadow-black/5"
-            )}
-          >
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="p-2.5 hover:bg-primary/20 rounded-full transition-all text-zinc-500 hover:text-primary hover:scale-110">
-              <Facebook className="w-4 h-4" />
-            </a>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="p-2.5 hover:bg-primary/20 rounded-full transition-all text-zinc-500 hover:text-primary hover:scale-110">
-              <Instagram className="w-4 h-4" />
-            </a>
-            <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="p-2.5 hover:bg-primary/20 rounded-full transition-all text-zinc-500 hover:text-primary hover:scale-110">
-              <TikTokIcon />
-            </a>
-            <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="p-2.5 hover:bg-primary/20 rounded-full transition-all text-zinc-500 hover:text-primary hover:scale-110">
-              <TelegramIcon />
-            </a>
-            <div className="w-px h-4 bg-zinc-500/20 mx-1.5" />
-            <a href="mailto:caponettopeppers@gmail.com" className="p-2.5 hover:bg-primary/20 rounded-full transition-all text-zinc-500 hover:text-primary hover:scale-110">
-              <Mail className="w-4 h-4" />
-            </a>
-          </motion.div>
-        </div>
-      </div>
+
     </nav>
   );
 }

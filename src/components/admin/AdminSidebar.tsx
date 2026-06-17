@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ShoppingBag, Box, Users, Power, ChevronRight, MessageSquare, Heart, X, Megaphone } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Box, Users, Power, ChevronRight, MessageSquare, Heart, X, Megaphone, FileCode } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 
@@ -10,6 +10,7 @@ export function AdminSidebar({ activeSection, setActiveSection, onLogout, theme,
     { id: 'vendor', icon: Box, label: 'Sección__vendedor' },
     { id: 'likes', icon: Heart, label: 'Likes_Insight' },
     { id: 'news', icon: Megaphone, label: 'Novedades_Banner' },
+    { id: 'community-manager', icon: FileCode, label: 'Modelos 3D (stl/3mf)' },
     { id: 'messages', icon: MessageSquare, label: 'Chat Directo', badgeCount: unreadCount },
     { id: 'users', icon: Users, label: 'Operadores' },
   ];

@@ -6,6 +6,7 @@ export const TRANSLATIONS = {
   es: {
     home: 'Inicio',
     catalog: 'Catálogo',
+    community: 'Comunidad 3D',
     quote: 'Cotizar',
     admin: 'Admin',
     heroSub: 'SOLUCIONES DE MANUFACTURA ADITIVA',
@@ -104,6 +105,7 @@ export const TRANSLATIONS = {
   en: {
     home: 'Home',
     catalog: 'Catalog',
+    community: '3D Community',
     quote: 'Quote',
     admin: 'Admin',
     heroSub: 'ADITIVE_MANUFACTURING_SOLUTIONS',

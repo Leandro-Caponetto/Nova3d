@@ -9,6 +9,7 @@ import { VendorPortal } from '../admin/VendorPortal';
 import { UsersList } from '../admin/Users';
 import { ProductLikes } from '../admin/ProductLikes';
 import { NewsManager } from '../admin/NewsManager';
+import { CommunityManager } from '../admin/CommunityManager';
 import { AdminMessages } from '../chat/AdminMessages';
 
 export function AdminView({ user, orders, theme, t, onProductChange }: any) {
@@ -162,6 +163,7 @@ export function AdminView({ user, orders, theme, t, onProductChange }: any) {
         {activeSection === 'likes' && <ProductLikes theme={theme} t={t} />}
         {activeSection === 'messages' && <AdminMessages theme={theme} t={t} user={user} />}
         {activeSection === 'users' && <UsersList theme={theme} t={t} />}
+        {activeSection === 'community-manager' && <CommunityManager theme={theme} t={t} />}
       </main>
     </div>
   );
