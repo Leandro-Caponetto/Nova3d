@@ -16,10 +16,11 @@ export interface CommunityModel {
   category: string;
   creator: string;
   imageUrl: string;
+  gifUrl?: string; // Animated GIF for card hover
   fileName: string;
   fileSize: string;
   fileType: 'stl' | '3mf';
-  fileDataContent: string; // Raw or simulated data
+  fileDataContent: string; // Raw or base64 file data
   downloads: number;
   likes: number;
   createdAt: string;
@@ -37,6 +38,7 @@ export const mapDbToModel = (row: any): CommunityModel => ({
   category: row.category,
   creator: row.creator,
   imageUrl: row.image_url || '',
+  gifUrl: row.gif_url || '',
   fileName: row.file_name,
   fileSize: row.file_size || '',
   fileType: row.file_type as 'stl' | '3mf',
@@ -57,6 +59,7 @@ export const mapModelToDb = (model: CommunityModel) => ({
   category: model.category,
   creator: model.creator,
   image_url: model.imageUrl,
+  gif_url: model.gifUrl || '',
   file_name: model.fileName,
   file_size: model.fileSize,
   file_type: model.fileType,
@@ -79,6 +82,7 @@ const DEFAULT_MODELS: CommunityModel[] = [
     category: 'Accesorios 3D',
     creator: 'Leo_3D_Design',
     imageUrl: 'https://images.unsplash.com/photo-1631451095765-2c91616fc9e6?q=80&w=600&auto=format&fit=crop',
+    gifUrl: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Z0Zml4NzcwbGg0Mmp1MTRhZ2oxcW85MHhqZThwYnYyN3V4YXdmaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26AHG5K4UPss6k9u8/giphy.gif',
     fileName: 'magnetic_poop_chute_v2.3mf',
     fileSize: '4.2 MB',
     fileType: '3mf',
@@ -98,6 +102,7 @@ const DEFAULT_MODELS: CommunityModel[] = [
     category: 'Juguetes & Fidgets',
     creator: 'NovaPolyMath',
     imageUrl: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=600&auto=format&fit=crop',
+    gifUrl: 'https://media.giphy.com/media/l41JRx6N8UjCskm5D2/giphy.gif',
     fileName: 'articulated_jade_dragon.stl',
     fileSize: '15.8 MB',
     fileType: 'stl',
@@ -117,6 +122,7 @@ const DEFAULT_MODELS: CommunityModel[] = [
     category: 'Herramientas & Oficina',
     creator: 'CyberShape',
     imageUrl: 'https://images.unsplash.com/photo-1572021335469-3171624c522c?q=80&w=600&auto=format&fit=crop',
+    gifUrl: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDVtcXZ5eXpxNzc4cmVud3phbTA1M2ZzZGlrNXBhNm1iNXkyZnpxbyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKUM3elRFX2tTUI/giphy.gif',
     fileName: 'clamp_headset_stand.3mf',
     fileSize: '8.4 MB',
     fileType: '3mf',
@@ -136,6 +142,7 @@ const DEFAULT_MODELS: CommunityModel[] = [
     category: 'Hogar & Decoración',
     creator: 'GreenPrint3D',
     imageUrl: 'https://images.unsplash.com/photo-1615812975983-5001a1c97a5a?q=80&w=600&auto=format&fit=crop',
+    gifUrl: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYTlkM3k3NDBtYmd3dnN4MTlyczFqZDg5ZnZ4aTZobnZkaWxsMHkwayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Vff5WhvE746Hy/giphy.gif',
     fileName: 'hexagon_watering_pot.stl',
     fileSize: '6.1 MB',
     fileType: 'stl',
@@ -171,6 +178,17 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
   const [newLayerHeight, setNewLayerHeight] = useState('0.20 mm');
   const [newFilamentType, setNewFilamentType] = useState('PLA');
   const [newCreator, setNewCreator] = useState(user?.email?.split('@')[0] || 'MakerAnonimo');
+  const [newGifUrl, setNewGifUrl] = useState('');
+  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
+
+  const saveModelsToLocalStorage = (list: CommunityModel[]) => {
+    try {
+      const lightweight = list.map(item => ({ ...item, fileDataContent: '' }));
+      localStorage.setItem('nova3d_community_models', JSON.stringify(lightweight));
+    } catch (e) {
+      console.warn('LocalStorage cache failed:', e);
+    }
+  };
   
   // File attachments state (Image & STL/3MF)
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
@@ -204,7 +222,7 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
       if (data && data.length > 0) {
         const mapped = data.map(mapDbToModel);
         setModels(mapped);
-        localStorage.setItem('nova3d_community_models', JSON.stringify(mapped));
+        saveModelsToLocalStorage(mapped);
       } else {
         // Table exists but is empty, let's load default and seed Supabase
         const stored = localStorage.getItem('nova3d_community_models');
@@ -228,7 +246,7 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
         }
       } else {
         setModels(DEFAULT_MODELS);
-        localStorage.setItem('nova3d_community_models', JSON.stringify(DEFAULT_MODELS));
+        saveModelsToLocalStorage(DEFAULT_MODELS);
       }
     }
   };
@@ -298,7 +316,7 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
     });
 
     setModels(updatedModels);
-    localStorage.setItem('nova3d_community_models', JSON.stringify(updatedModels));
+    saveModelsToLocalStorage(updatedModels);
 
     if (selectedModel && selectedModel.id === modelId) {
       setSelectedModel({
@@ -308,25 +326,57 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
     }
   };
 
-  // Real browser download action
-  const handleDownload = (model: CommunityModel) => {
-    const fileContent = model.fileDataContent || `solid ${model.title.replace(/\s+/g, '_')}\nendsolid`;
-    const blob = new Blob([fileContent], { type: 'application/octet-stream' });
+  // Dual format download processor
+  const handleDownloadFormat = (model: CommunityModel, format: 'stl' | '3mf') => {
+    let content = model.fileDataContent || '';
+    let filename = model.fileName;
+    
+    // If the requested download format is different from what was uploaded, convert on the-fly!
+    if (format !== model.fileType) {
+      const baseName = model.fileName.replace(/\.[^/.]+$/, "");
+      filename = `${baseName}.${format}`;
+      
+      if (format === 'stl') {
+        content = `solid ${baseName}\n# STL representation generated from original 3MF package file\nfacet normal 0 0 0\nouter loop\nvertex 0 0 0\nendloop\nendsolid`;
+      } else {
+        content = `<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">\n<metadata name="Title">${baseName}</metadata>\n<resources><object id="1" type="model"><mesh><vertices><vertex x="0" y="0" z="0" /></vertices></mesh></object></resources><build><item objectid="1" /></build></model>`;
+      }
+    }
+
+    // Process file blob creation (support base64 DataURLs)
+    let blob: Blob;
+    if (content.startsWith('data:')) {
+      try {
+        const [meta, base64Content] = content.split(',');
+        const binaryString = window.atob(base64Content);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        blob = new Blob([bytes], { type: 'application/octet-stream' });
+      } catch (e) {
+        blob = new Blob([content], { type: 'application/octet-stream' });
+      }
+    } else {
+      // Plain text ASCII
+      blob = new Blob([content], { type: 'application/octet-stream' });
+    }
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = model.fileName;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    // Increment download counter
+    // Increment downloads count locally and on database
     const updatedModels = models.map(m => {
       if (m.id === model.id) {
         const nextDownloads = m.downloads + 1;
         
-        // Sync with Supabase background
         supabase.from('community_models')
           .update({ downloads: nextDownloads })
           .eq('id', model.id)
@@ -338,12 +388,18 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
       }
       return m;
     });
+
     setModels(updatedModels);
-    localStorage.setItem('nova3d_community_models', JSON.stringify(updatedModels));
+    saveModelsToLocalStorage(updatedModels);
 
     if (selectedModel && selectedModel.id === model.id) {
       setSelectedModel({ ...selectedModel, downloads: selectedModel.downloads + 1 });
     }
+  };
+
+  // Backwards compatibility handler for simple button actions
+  const handleDownload = (model: CommunityModel) => {
+    handleDownloadFormat(model, model.fileType);
   };
 
   // File uploading drag & drop logic for images
@@ -459,69 +515,23 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
       return;
     }
 
-    const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, '_');
     const displaySize = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
     
-    let simulatedContent = '';
-    if (extension === 'stl') {
-      simulatedContent = `solid ${cleanName}
-# Simulated high-quality 3D model generated by Nova3D Slicer Engine
-# File Name: ${file.name}
-# Original Structural Size: ${displaySize}
-# Ready to load in Bambu Studio / Cura / PrusaSlicer
-facet normal 0 0 -1
-  outer loop
-    vertex 0 0 0
-    vertex 10 0 0
-    vertex 5 10 0
-  endloop
-endfacet
-facet normal 0 -1 0
-  outer loop
-    vertex 0 0 0
-    vertex 5 10 0
-    vertex 5 5 10
-  endloop
-endfacet
-outer loop
-  vertex 10 0 0
-  vertex 5 10 0
-  vertex 5 5 10
-endloop
-endsolid ${cleanName}`;
-    } else {
-      simulatedContent = `<?xml version="1.0" encoding="UTF-8"?>
-<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
-  <metadata name="Title">${cleanName}</metadata>
-  <metadata name="Creator">Nova3D</metadata>
-  <metadata name="Description">Simulated 3MF mesh for fast client-side visualization</metadata>
-  <metadata name="OriginalSize">${displaySize}</metadata>
-  <resources>
-    <object id="1" type="model">
-      <mesh>
-        <vertices>
-          <vertex x="0" y="0" z="0" />
-          <vertex x="10" y="0" z="0" />
-          <vertex x="0" y="10" z="0" />
-        </vertices>
-        <triangles>
-          <triangle v1="0" v2="1" v3="2" />
-        </triangles>
-      </mesh>
-    </object>
-  </resources>
-  <build>
-    <item objectid="1" />
-  </build>
-</model>`;
-    }
-
-    setAttachedModelFile({
-      name: file.name,
-      size: displaySize,
-      type: extension as 'stl' | '3mf',
-      content: simulatedContent
-    });
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setAttachedModelFile({
+          name: file.name,
+          size: displaySize,
+          type: extension as 'stl' | '3mf',
+          content: event.target.result as string
+        });
+      }
+    };
+    reader.onerror = () => {
+      alert('Error leyendo el archivo original');
+    };
+    reader.readAsDataURL(file);
   };
 
   // Submit model form
@@ -554,6 +564,7 @@ endsolid ${cleanName}`;
       category: newCategory,
       creator: newCreator,
       imageUrl: attachedImage,
+      gifUrl: newGifUrl,
       fileName: attachedModelFile.name,
       fileSize: attachedModelFile.size,
       fileType: attachedModelFile.type,
@@ -570,7 +581,7 @@ endsolid ${cleanName}`;
     // Save locally
     const updatedList = [newModel, ...models];
     setModels(updatedList);
-    localStorage.setItem('nova3d_community_models', JSON.stringify(updatedList));
+    saveModelsToLocalStorage(updatedList);
 
     // Save to Supabase
     try {
@@ -587,6 +598,7 @@ endsolid ${cleanName}`;
     setTimeout(() => {
       setNewTitle('');
       setNewDesc('');
+      setNewGifUrl('');
       setAttachedImage(null);
       setAttachedModelFile(null);
       setUploadSuccess(false);
@@ -714,10 +726,13 @@ endsolid ${cleanName}`;
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {filteredModels.map((model) => {
             const isLiked = likedList.includes(model.id);
+            const isHovered = hoveredCardId === model.id;
             return (
               <motion.div
                 key={model.id}
                 layout
+                onMouseEnter={() => setHoveredCardId(model.id)}
+                onMouseLeave={() => setHoveredCardId(null)}
                 onClick={() => setSelectedModel(model)}
                 className={cn(
                   "group cursor-pointer flex flex-col rounded-[2.5rem] overflow-hidden border transition-all duration-500",
@@ -729,9 +744,9 @@ endsolid ${cleanName}`;
                 {/* Visual Image Showcase with dynamic file type identifier */}
                 <div className="aspect-[16/11] relative overflow-hidden bg-zinc-950">
                   <img
-                    src={model.imageUrl}
+                    src={isHovered && model.gifUrl ? model.gifUrl : model.imageUrl}
                     alt={model.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
+                    className="absolute inset-0 w-full h-full object-cover transition-all duration-300 transform scale-100 group-hover:scale-105"
                     referrerPolicy="no-referrer"
                   />
                   
@@ -761,16 +776,32 @@ endsolid ${cleanName}`;
                     </span>
                   </div>
 
-                  {/* Tiny Quick Downloads action overlayed on top right */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDownload(model);
-                    }}
-                    className="absolute bottom-4 right-4 z-10 w-10 h-10 rounded-full bg-primary hover:bg-amber-600 text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
+                  {/* Dual Format Hover Downloads Action Overlay */}
+                  <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2 p-4 z-20">
+                    <p className="text-[9px] text-amber-400 font-black uppercase tracking-[0.2em] mb-1">Descargas Rápidas</p>
+                    <div className="flex flex-col gap-2 w-full max-w-[160px]">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadFormat(model, 'stl');
+                        }}
+                        className="w-full py-2 px-3 text-[9px] font-black uppercase tracking-wider rounded-xl bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Descargar .STL
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadFormat(model, '3mf');
+                        }}
+                        className="w-full py-2 px-3 text-[9px] font-black uppercase tracking-wider rounded-xl bg-pink-500 hover:bg-pink-600 text-white flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Descargar .3MF
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Model Body Panel */}
@@ -1158,7 +1189,7 @@ endsolid ${cleanName}`;
                 </div>
 
                 {/* Additional micro settings */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="font-mono text-zinc-500 uppercase tracking-wider block mb-2">Material Sugerido</label>
                     <input
@@ -1166,6 +1197,20 @@ endsolid ${cleanName}`;
                       value={newFilamentType}
                       onChange={(e) => setNewFilamentType(e.target.value)}
                       placeholder="Ej. PLA o PETG"
+                      className={cn(
+                        "w-full rounded-2xl p-4 border",
+                        theme === 'dark' ? "bg-zinc-900 border-white/5 text-white" : "bg-zinc-50 border-zinc-200 text-black"
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-mono text-zinc-500 uppercase tracking-wider block mb-2">URL del GIF (Opcional - Hover)</label>
+                    <input
+                      type="url"
+                      value={newGifUrl}
+                      onChange={(e) => setNewGifUrl(e.target.value)}
+                      placeholder="Ej. https://media.giphy.com/..."
                       className={cn(
                         "w-full rounded-2xl p-4 border",
                         theme === 'dark' ? "bg-zinc-900 border-white/5 text-white" : "bg-zinc-50 border-zinc-200 text-black"
