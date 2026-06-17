@@ -40,7 +40,7 @@ export function Navbar({
           <div className="flex items-center gap-3 cursor-pointer group flex-shrink-0" onClick={() => setActiveTab('home')}>
             <Nova3DLogo theme={theme} />
             <span className={cn("text-2xl font-black tracking-tighter uppercase italic hidden sm:inline", theme === 'dark' ? "text-white" : "text-black")}>
-              NOVA<span className="text-primary glow-text transition-all group-hover:text-primary-light">3D</span>
+              NOVA<span className="text-[#f59e0b] drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] transition-colors group-hover:text-primary-light">3D</span>
             </span>
           </div>
 
