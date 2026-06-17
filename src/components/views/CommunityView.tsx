@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Download, Heart, UploadCloud, Search, Eye, Sparkles, Filter, 
   FileCode, X, Image as ImageIcon, MessageSquare, AlertCircle, 
-  Settings, Layers, ChevronRight, Check, Share2, Printer
+  Settings, Layers, ChevronRight, Check, Share2, Printer,
+  Camera, Flame, Rocket, Clock, SlidersHorizontal, ThumbsUp
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
@@ -157,6 +158,13 @@ const DEFAULT_MODELS: CommunityModel[] = [
   }
 ];
 
+const formatK = (num: number): string => {
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1).replace('.0', '') + 'k';
+  }
+  return num.toString();
+};
+
 export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: any; user: any }) {
   const [models, setModels] = useState<CommunityModel[]>([]);
   const [search, setSearch] = useState('');
@@ -180,6 +188,8 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
   const [newCreator, setNewCreator] = useState(user?.email?.split('@')[0] || 'MakerAnonimo');
   const [newGifUrl, setNewGifUrl] = useState('');
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
+  const [activeSubTab, setActiveSubTab] = useState<'models' | 'laser' | 'users' | 'collections' | 'posts'>('models');
+  const [sortBy, setSortBy] = useState<'relevance' | 'trending' | 'boosts' | 'newest' | 'downloads' | 'likes'>('relevance');
 
   const saveModelsToLocalStorage = (list: CommunityModel[]) => {
     try {
@@ -270,7 +280,7 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
   // Handle Category list
   const categories = ['All', 'Accesorios 3D', 'Juguetes & Fidgets', 'Herramientas & Oficina', 'Hogar & Decoración', 'Ingeniería & Prototipos'];
 
-  // Filter application
+  // Filter application & MakerWorld sorting execution
   const filteredModels = models.filter(m => {
     const matchesSearch = m.title.toLowerCase().includes(search.toLowerCase()) || 
                           m.description.toLowerCase().includes(search.toLowerCase()) ||
@@ -278,6 +288,22 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
     const matchesCategory = categoryFilter === 'All' || m.category === categoryFilter;
     const matchesType = typeFilter === 'all' || m.fileType === typeFilter;
     return matchesSearch && matchesCategory && matchesType;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case 'trending':
+        return (b.downloads * 0.4 + b.likes * 0.6) - (a.downloads * 0.4 + a.likes * 0.6);
+      case 'boosts':
+        return (b.downloads * 0.2 + b.likes * 0.8) - (a.downloads * 0.2 + a.likes * 0.8);
+      case 'newest':
+        return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
+      case 'downloads':
+        return b.downloads - a.downloads;
+      case 'likes':
+        return b.likes - a.likes;
+      case 'relevance':
+      default:
+        return 0; // Default ordering
+    }
   });
 
   // Like action toggle
@@ -647,72 +673,222 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
         </button>
       </div>
 
-      {/* Filter and Search Bar Section */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-6 mb-12 pb-8 border-b border-zinc-500/10">
-        {/* Categories Scroller */}
-        <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto pb-4 lg:pb-0 scrollbar-none">
-          <Filter className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setCategoryFilter(cat)}
-              className={cn(
-                "px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap border",
-                categoryFilter === cat
-                  ? "bg-primary border-primary text-white shadow-lg"
-                  : (theme === 'dark' 
-                     ? "bg-zinc-900 border-white/5 text-zinc-400 hover:text-white hover:border-white/25"
-                     : "bg-white border-zinc-200 text-zinc-600 hover:text-black hover:border-zinc-400")
-              )}
-            >
-              {cat === 'All' ? 'Ver Todo' : cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Right filters: Search and (.STL / .3MF) toggles */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
-          {/* Format quick toggle */}
-          <div className={cn(
-            "flex items-center p-1 rounded-2xl border w-full sm:w-auto justify-center",
-            theme === 'dark' ? "bg-zinc-900/50 border-white/5" : "bg-zinc-50 border-zinc-200"
-          )}>
-            {(['all', 'stl', '3mf'] as const).map((type) => (
-              <button
-                key={type}
-                onClick={() => setTypeFilter(type)}
-                className={cn(
-                  "px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider whitespace-nowrap transition-all",
-                  typeFilter === type
-                    ? "bg-primary text-white font-black"
-                    : "text-zinc-500 hover:text-zinc-400"
-                )}
-              >
-                {type === 'all' ? 'Formatos' : `.${type}`}
-              </button>
-            ))}
-          </div>
-
-          {/* Search box within community context */}
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+      {/* MAKERWORLD STYLE SEARCH & TOOLBAR */}
+      <div className="space-y-6 mb-10">
+        {/* Search row with Upload button */}
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
             <input
               type="text"
-              placeholder="Buscar modelos o creadores..."
+              placeholder="Buscar modelos, creadores o llaveros (Ej. llavero pelotas de futbol)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className={cn(
-                "w-full bg-zinc-500/5 border border-zinc-500/10 rounded-2xl py-3 pl-11 pr-11 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all",
-                theme === 'dark' ? "text-white placeholder:text-zinc-600" : "text-black placeholder:text-zinc-400"
+                "w-full rounded-full py-4 pl-12 pr-16 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all border shadow-sm",
+                theme === 'dark' 
+                  ? "bg-zinc-900 border-zinc-700/60 text-white placeholder:text-zinc-500" 
+                  : "bg-white border-zinc-200 text-black placeholder:text-zinc-400"
               )}
             />
+            {/* Camera icon mimicking MakerWorld upload image search */}
+            <div className="absolute right-12 top-1/2 -translate-y-1/2 text-zinc-400/80 hover:text-emerald-500 cursor-pointer p-1">
+              <Camera className="w-4 h-4" />
+            </div>
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-primary">
-                <X className="w-3.5 h-3.5" />
+              <button 
+                onClick={() => setSearch('')} 
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-red-500 transition-colors"
+                id="clear-search-btn"
+              >
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
+
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="w-full md:w-auto inline-flex items-center justify-center gap-2 border border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white dark:border-emerald-400 dark:text-emerald-400 dark:hover:bg-emerald-400 dark:hover:text-zinc-950 px-6 py-3 rounded-full font-bold text-sm tracking-wide transition-all shadow-sm active:scale-95 whitespace-nowrap"
+          >
+            <UploadCloud className="w-4 h-4" />
+            Upload
+          </button>
         </div>
+
+        {/* Categories / Tabs Row exactly as MakerWorld */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+          <button
+            onClick={() => {
+              setActiveSubTab('models');
+              setCategoryFilter('All');
+            }}
+            className={cn(
+              "px-5 py-2.5 rounded-full text-xs font-black tracking-wide whitespace-nowrap transition-all",
+              activeSubTab === 'models'
+                ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-md"
+                : (theme === 'dark' 
+                   ? "bg-zinc-800/60 border border-white/5 text-zinc-300 hover:bg-zinc-800"
+                   : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200")
+            )}
+          >
+            Modelos ({filteredModels.length}+)
+          </button>
+          
+          <button
+            onClick={() => {
+              setActiveSubTab('laser');
+              setCategoryFilter('All');
+            }}
+            className={cn(
+              "px-5 py-2.5 rounded-full text-xs font-black tracking-wide whitespace-nowrap transition-all",
+              activeSubTab === 'laser'
+                ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-md"
+                : (theme === 'dark' 
+                   ? "bg-zinc-800/60 border border-white/5 text-zinc-300 hover:bg-zinc-800"
+                   : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200")
+            )}
+          >
+            Láser & Corte (283)
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('users')}
+            className={cn(
+              "px-5 py-2.5 rounded-full text-xs font-black tracking-wide whitespace-nowrap transition-all",
+              activeSubTab === 'users'
+                ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-md"
+                : (theme === 'dark' 
+                   ? "bg-zinc-800/60 border border-white/5 text-zinc-300 hover:bg-zinc-800"
+                   : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200")
+            )}
+          >
+            Usuarios ({Array.from(new Set(models.map(m => m.creator))).length})
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('collections')}
+            className={cn(
+              "px-5 py-2.5 rounded-full text-xs font-black tracking-wide whitespace-nowrap transition-all",
+              activeSubTab === 'collections'
+                ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-md"
+                : (theme === 'dark' 
+                   ? "bg-zinc-800/60 border border-white/5 text-zinc-300 hover:bg-zinc-800"
+                   : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200")
+            )}
+          >
+            Colecciones (1)
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('posts')}
+            className={cn(
+              "px-5 py-2.5 rounded-full text-xs font-black tracking-wide whitespace-nowrap transition-all",
+              activeSubTab === 'posts'
+                ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-md"
+                : (theme === 'dark' 
+                   ? "bg-zinc-800/60 border border-white/5 text-zinc-300 hover:bg-zinc-800"
+                   : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200")
+            )}
+          >
+            Publicaciones (3)
+          </button>
+        </div>
+
+        {/* Interactive Sorting Row exactly as MakerWorld style */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-3 border-t border-b border-zinc-500/10 text-xs font-medium">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 text-zinc-500">
+            <span className="font-semibold text-zinc-400 text-xs uppercase tracking-wider">Sort by:</span>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+              {([
+                { key: 'relevance', label: 'Relevance' },
+                { key: 'trending', label: 'Trending' },
+                { key: 'boosts', label: 'Boosts' },
+                { key: 'newest', label: 'Newest' },
+                { key: 'downloads', label: 'Downloads' },
+                { key: 'likes', label: 'Likes' }
+              ] as const).map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setSortBy(opt.key)}
+                  className={cn(
+                    "transition-all text-xs focus:outline-none font-bold capitalize pb-0.5",
+                    sortBy === opt.key 
+                      ? "text-emerald-500 font-extrabold" 
+                      : "text-zinc-500 hover:text-zinc-800 dark:hover:text-white"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 self-end sm:self-auto">
+            {/* Format quick toggle (STL vs 3MF) */}
+            <div className={cn(
+              "flex items-center p-0.5 rounded-full border text-[11px]",
+              theme === 'dark' ? "bg-zinc-900/50 border-white/5" : "bg-zinc-50 border-zinc-200"
+            )}>
+              {(['all', 'stl', '3mf'] as const).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setTypeFilter(type)}
+                  className={cn(
+                    "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all",
+                    typeFilter === type
+                      ? "bg-emerald-500 text-white font-extrabold shadow-sm"
+                      : "text-zinc-500 hover:text-zinc-650"
+                  )}
+                >
+                  {type === 'all' ? 'Formatos' : `.${type}`}
+                </button>
+              ))}
+            </div>
+
+            {/* All Time Dropdown */}
+            <button className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-bold text-zinc-600 dark:text-zinc-300 transition-colors",
+              theme === 'dark' ? "bg-zinc-900 border-white/5 hover:bg-zinc-800" : "bg-white border-zinc-200 hover:bg-zinc-50"
+            )}>
+              <Clock className="w-3.5 h-3.5 text-zinc-400" />
+              All Time
+              <span className="text-[9px] text-zinc-400">▼</span>
+            </button>
+
+            {/* Filter Dropdown Toggle */}
+            <button className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-bold text-zinc-600 dark:text-zinc-300 transition-colors",
+              theme === 'dark' ? "bg-zinc-900 border-white/5 hover:bg-zinc-800" : "bg-white border-zinc-200 hover:bg-zinc-50"
+            )}>
+              <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
+              Filter
+              <span className="text-[9px] text-zinc-400">▼</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Sub-Category / Category Filter scroller (Optional, let them refine the categories) */}
+        {activeSubTab === 'models' && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-450 mr-2 shrink-0">Categorías:</span>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={cn(
+                  "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border shrink-0",
+                  categoryFilter === cat
+                    ? "bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                    : (theme === 'dark' 
+                       ? "bg-zinc-900/60 border-white/5 text-zinc-400 hover:text-white"
+                       : "bg-white border-zinc-200 text-zinc-600 hover:text-black")
+                )}
+              >
+                {cat === 'All' ? 'Ver Todo' : cat}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Catalog Models Grid */}
@@ -723,7 +899,7 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
           <p className="text-sm text-zinc-400 max-w-md mx-auto">Sé el primero en subir un modelo dentro de esta categoría arrastrando tus configuraciones preferidas.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
           {filteredModels.map((model) => {
             const isLiked = likedList.includes(model.id);
             const isHovered = hoveredCardId === model.id;
@@ -734,107 +910,105 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
                 onMouseEnter={() => setHoveredCardId(model.id)}
                 onMouseLeave={() => setHoveredCardId(null)}
                 onClick={() => setSelectedModel(model)}
-                className={cn(
-                  "group cursor-pointer flex flex-col rounded-[2.5rem] overflow-hidden border transition-all duration-500",
-                  theme === 'dark'
-                    ? "bg-zinc-900/40 border-white/5 hover:border-primary/40 hover:bg-zinc-900/80 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)]"
-                    : "bg-white border-zinc-150 hover:border-primary/40 shadow-[0_35px_60px_-15px_rgba(0,0,0,0.05)] hover:shadow-[0_45px_80px_-15px_rgba(0,0,0,0.08)]"
-                )}
+                className="group cursor-pointer flex flex-col transition-all duration-300"
               >
                 {/* Visual Image Showcase with dynamic file type identifier */}
-                <div className="aspect-[16/11] relative overflow-hidden bg-zinc-950">
+                <div className="aspect-[4/3] relative rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/40 dark:border-zinc-800/50">
                   <img
                     src={isHovered && model.gifUrl ? model.gifUrl : model.imageUrl}
                     alt={model.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-all duration-300 transform scale-100 group-hover:scale-105"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 transform scale-100 group-hover:scale-[1.02]"
                     referrerPolicy="no-referrer"
                   />
                   
-                  {/* Subtle dark bottom scrim */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  {/* MakerWorld Authentic Green Plate Icon in Top Left */}
+                  <div className="absolute top-2.5 left-2.5 z-10 flex items-center justify-center bg-[#00c53c] text-white p-1.5 rounded-md shadow-sm opacity-90 group-hover:opacity-100 transition-opacity" title="Printable model plate">
+                    {/* 4 dots grid of Makerworld build plate */}
+                    <div className="grid grid-cols-2 gap-0.5">
+                      <div className="w-[3px] h-[3px] rounded-full bg-white animate-pulse" />
+                      <div className="w-[3px] h-[3px] rounded-full bg-white" />
+                      <div className="w-[3px] h-[3px] rounded-full bg-white" />
+                      <div className="w-[3px] h-[3px] rounded-full bg-white" />
+                    </div>
+                  </div>
                   
                   {/* Format Indicator Badge */}
-                  <div className="absolute top-4 left-4 z-10 flex gap-2">
+                  <div className="absolute top-2.5 right-2.5 z-10 flex gap-1">
                     <span className={cn(
-                      "px-3 py-1 backdrop-blur-md text-[9px] font-black uppercase tracking-widest rounded-full border",
+                      "px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md backdrop-blur-sm shadow-sm",
                       model.fileType === '3mf' 
-                        ? "bg-pink-500/20 text-pink-300 border-pink-500/20" 
-                        : "bg-sky-500/20 text-sky-300 border-sky-500/20"
+                        ? "bg-pink-500/90 text-white font-extrabold" 
+                        : "bg-sky-500/90 text-white font-extrabold"
                     )}>
-                      .{model.fileType}
+                      {model.fileType.toUpperCase()}
                     </span>
-                    <span className="px-3 py-1 backdrop-blur-md bg-black/40 text-[9px] font-black text-amber-400 border border-amber-400/20 rounded-full">
+                    <span className="px-2 py-0.5 text-[8px] font-bold rounded-md bg-black/60 text-zinc-100 backdrop-blur-sm">
                       {model.fileSize}
                     </span>
                   </div>
 
-                  {/* Creator Signature label */}
-                  <div className="absolute bottom-4 left-4 z-10">
-                    <span className="text-[10px] text-white font-mono flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      by @{model.creator}
-                    </span>
-                  </div>
-
                   {/* Dual Format Hover Downloads Action Overlay */}
-                  <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2 p-4 z-20">
-                    <p className="text-[9px] text-amber-400 font-black uppercase tracking-[0.2em] mb-1">Descargas Rápidas</p>
-                    <div className="flex flex-col gap-2 w-full max-w-[160px]">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1.5 p-3 z-20">
+                    <span className="text-[9px] text-white/95 font-extrabold uppercase tracking-widest mb-1 shadow-sm">Bajar Archivo</span>
+                    <div className="flex gap-1.5 w-full max-w-[170px] justify-center">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDownloadFormat(model, 'stl');
                         }}
-                        className="w-full py-2 px-3 text-[9px] font-black uppercase tracking-wider rounded-xl bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md"
+                        className="flex-1 py-1.5 px-2 text-[9px] font-black uppercase rounded-md bg-stone-900 border border-white/20 hover:bg-emerald-500 hover:border-emerald-500 text-white flex items-center justify-center gap-1 transition-all active:scale-95 shadow-sm"
                       >
-                        <Download className="w-3.5 h-3.5" />
-                        Descargar .STL
+                        .STL
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDownloadFormat(model, '3mf');
                         }}
-                        className="w-full py-2 px-3 text-[9px] font-black uppercase tracking-wider rounded-xl bg-pink-500 hover:bg-pink-600 text-white flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md"
+                        className="flex-1 py-1.5 px-2 text-[9px] font-black uppercase rounded-md bg-stone-900 border border-white/20 hover:bg-emerald-500 hover:border-emerald-500 text-white flex items-center justify-center gap-1 transition-all active:scale-95 shadow-sm"
                       >
-                        <Download className="w-3.5 h-3.5" />
-                        Descargar .3MF
+                        .3MF
                       </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Model Body Panel */}
-                <div className="p-6 flex flex-col flex-1">
-                  <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 mb-2">
-                    {model.category}
-                  </span>
-                  
-                  <h3 className="text-md font-black uppercase tracking-tight italic mb-3 leading-snug group-hover:text-primary transition-colors min-h-[3rem] line-clamp-2">
+                {/* Model Body Panel sentado directamente abajo */}
+                <div className="pt-2.5 px-0.5 flex flex-col w-full">
+                  <h3 className="text-[13px] font-bold text-zinc-800 dark:text-zinc-100 hover:text-emerald-500 leading-snug line-clamp-2 transition-colors min-h-[2.35rem]" title={model.title}>
                     {model.title}
                   </h3>
 
-                  <p className={cn(
-                    "text-[11px] leading-relaxed mb-6 font-medium line-clamp-3",
-                    theme === 'dark' ? "text-zinc-500" : "text-zinc-400"
-                  )}>
-                    {model.description}
-                  </p>
-
-                  {/* Quantitative Stats */}
-                  <div className="mt-auto pt-4 border-t border-dashed border-zinc-500/10 flex items-center justify-between text-[11px] font-mono text-zinc-500">
-                    <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400">
-                      <Download className="w-3.5 h-3.5 text-primary" />
-                      <span>{model.downloads}</span>
+                  {/* Creator Signature + Quantitative Stats Row exactly as MakerWorld */}
+                  <div className="mt-2.5 flex items-center justify-between w-full text-xs">
+                    {/* Left: Avatar with username */}
+                    <div className="flex items-center gap-1.5 truncate max-w-[55%]">
+                      <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-black text-zinc-650 dark:text-zinc-350 border border-zinc-300/40 dark:border-zinc-700/50">
+                        {model.creator ? model.creator.slice(0, 2).toUpperCase() : 'MA'}
+                      </div>
+                      <span className="text-[11px] font-medium text-zinc-650 dark:text-zinc-400 truncate hover:text-zinc-800 dark:hover:text-white transition-colors">
+                        {model.creator}
+                      </span>
                     </div>
 
-                    <button
-                      onClick={(e) => handleLike(e, model.id)}
-                      className="flex items-center gap-1.5 hover:text-rose-500 transition-colors"
-                    >
-                      <Heart className={cn("w-3.5 h-3.5", isLiked ? "fill-rose-500 text-rose-500" : "text-zinc-500")} />
-                      <span className={cn(isLiked && "text-rose-500 font-bold")}>{model.likes}</span>
-                    </button>
+                    {/* Right: Downloads & Likes */}
+                    <div className="flex items-center gap-3 shrink-0 text-zinc-400 dark:text-zinc-500 font-mono text-[11px]">
+                      {/* Downloads */}
+                      <span className="flex items-center gap-0.5" title="Downloads">
+                        <Download className="w-3.5 h-3.5 opacity-80" />
+                        <span className="font-semibold text-zinc-500 dark:text-zinc-400">{formatK(model.downloads)}</span>
+                      </span>
+
+                      {/* Likes (ThumbsUp) */}
+                      <button
+                        onClick={(e) => handleLike(e, model.id)}
+                        className="flex items-center gap-0.5 hover:text-rose-500 transition-colors group/like focus:outline-none"
+                        title={isLiked ? "Quitar de favoritos" : "Dar favorito"}
+                      >
+                        <ThumbsUp className={cn("w-3.5 h-3.5 transition-transform group-hover/like:scale-110", isLiked ? "text-emerald-500 fill-emerald-500/20" : "opacity-80")} />
+                        <span className={cn("font-semibold", isLiked ? "text-emerald-500" : "text-zinc-505")}>{formatK(model.likes)}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>
