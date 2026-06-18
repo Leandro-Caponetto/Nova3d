@@ -6,88 +6,7 @@ import { ConfirmModal } from '../common/ConfirmModal';
 import { CommunityModel, mapDbToModel, mapModelToDb } from '../views/CommunityView';
 import { supabase } from '../../lib/supabase';
 
-const DEFAULT_MODELS: CommunityModel[] = [
-  {
-    id: 'bambu-poop-chute',
-    title: 'Buzón de Purga Magnético / Bambu Poop Chute',
-    description: 'Un recolector magnético elegante diseñado para impresoras Bambu Lab y similares. Se acopla perfectamente a la parte trasera, capturando todos los descartes de filamento de forma limpia y ordenada.',
-    category: 'Accesorios 3D',
-    creator: 'Leo_3D_Design',
-    imageUrl: 'https://images.unsplash.com/photo-1631451095765-2c91616fc9e6?q=80&w=600&auto=format&fit=crop',
-    gifUrl: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Z0Zml4NzcwbGg0Mmp1MTRhZ2oxcW85MHhqZThwYnYyN3V4YXdmaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26AHG5K4UPss6k9u8/giphy.gif',
-    fileName: 'magnetic_poop_chute_v2.3mf',
-    fileSize: '4.2 MB',
-    fileType: '3mf',
-    fileDataContent: 'solid magnetic_poop_chute\nfacet normal 0 0 0\nouter loop\nvertex 0 0 0\nendloop\nendsolid',
-    downloads: 1240,
-    likes: 382,
-    createdAt: '11 Jun 2026',
-    infill: '15% Gyroid',
-    supports: false,
-    layerHeight: '0.20 mm',
-    filamentType: 'PLA / PETG'
-  },
-  {
-    id: 'articulated-cyber-dragon',
-    title: 'Dragón Articulado de Jade (Fidget Toy)',
-    description: 'Impresionante modelo articulado imprimible en una sola pieza (Print-in-Place). No requiere soportes. Altamente flexible y satisfactorio al tacto, ideal para filamentos de tipo Silk o cambio de color.',
-    category: 'Juguetes & Fidgets',
-    creator: 'NovaPolyMath',
-    imageUrl: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=600&auto=format&fit=crop',
-    gifUrl: 'https://media.giphy.com/media/l41JRx6N8UjCskm5D2/giphy.gif',
-    fileName: 'articulated_jade_dragon.stl',
-    fileSize: '15.8 MB',
-    fileType: 'stl',
-    fileDataContent: 'solid articulated_dragon\nfacet normal 0 0 0\nouter loop\nvertex 1 2 3\nendloop\nendsolid',
-    downloads: 3850,
-    likes: 914,
-    createdAt: '14 Jun 2026',
-    infill: '20% Grid',
-    supports: false,
-    layerHeight: '0.16 mm',
-    filamentType: 'PLA Silk'
-  },
-  {
-    id: 'modular-headset-holder',
-    title: 'Soporte Auriculares Ajustable para Escritorio',
-    description: 'Soporte mecánico minimalista de auriculares con base tipo morsa a rosca ajustable para tableros de 10mm a 45mm. Súper resistente y práctico para organización gaming o de oficina.',
-    category: 'Herramientas & Oficina',
-    creator: 'CyberShape',
-    imageUrl: 'https://images.unsplash.com/photo-1572021335469-3171624c522c?q=80&w=600&auto=format&fit=crop',
-    gifUrl: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDVtcXZ5eXpxNzc4cmVud3phbTA1M2ZzZGlrNXBhNm1iNXkyZnpxbyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKUM3elRFX2tTUI/giphy.gif',
-    fileName: 'clamp_headset_stand.3mf',
-    fileSize: '8.4 MB',
-    fileType: '3mf',
-    fileDataContent: 'solid clamp_headset\nfacet normal 0 0 1\nouter loop\nvertex 0 1 0\nendloop\nendsolid',
-    downloads: 870,
-    likes: 195,
-    createdAt: '15 Jun 2026',
-    infill: '30% Tri-Hexagonal',
-    supports: true,
-    layerHeight: '0.20 mm',
-    filamentType: 'PETG / PLA Tough'
-  },
-  {
-    id: 'self-watering-pot',
-    title: 'Maceta Modular con Autorriego Hexagonal',
-    description: 'Diseño inteligente de maceta geométrica hexagonal de dos partes: una cámara de depósito de agua y un contenedor superior para tierra con ranuras capilares. Mantiene la humedad perfecta del suelo.',
-    category: 'Hogar & Decoración',
-    creator: 'GreenPrint3D',
-    imageUrl: 'https://images.unsplash.com/photo-1615812975983-5001a1c97a5a?q=80&w=600&auto=format&fit=crop',
-    gifUrl: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYTlkM3k3NDBtYmd3dnN4MTlyczFqZDg5ZnZ4aTZobnZkaWxsMHkwayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Vff5WhvE746Hy/giphy.gif',
-    fileName: 'hexagon_watering_pot.stl',
-    fileSize: '6.1 MB',
-    fileType: 'stl',
-    fileDataContent: 'solid watering_pot\nfacet normal 1 0 0\nouter loop\nvertex 1 1 1\nendloop\nendsolid',
-    downloads: 1420,
-    likes: 299,
-    createdAt: '16 Jun 2026',
-    infill: '15% Honeycomb',
-    supports: false,
-    layerHeight: '0.24 mm',
-    filamentType: 'PETG (Impermeable)'
-  }
-];
+const DEFAULT_MODELS: CommunityModel[] = [];
 
 export function CommunityManager({ theme, t }: { theme: 'dark' | 'light'; t: any }) {
   const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
@@ -151,16 +70,38 @@ export function CommunityManager({ theme, t }: { theme: 'dark' | 'light'; t: any
         throw error;
       }
 
+      const hardcodedIds = ['bambu-poop-chute', 'articulated-cyber-dragon', 'modular-headset-holder', 'self-watering-pot'];
+
       if (data && data.length > 0) {
-        const mapped = data.map(mapDbToModel);
+        // Automatically delete any old hardcoded model items from the database
+        const hasHardcoded = data.some(m => hardcodedIds.includes(m.id));
+        if (hasHardcoded) {
+          try {
+            await supabase.from('community_models').delete().in('id', hardcodedIds);
+          } catch (delErr) {
+            console.warn('Could not purge hardcoded items in admin:', delErr);
+          }
+        }
+        
+        const filtered = data.filter(m => !hardcodedIds.includes(m.id));
+        const mapped = filtered.map(mapDbToModel);
         setModels(mapped);
         saveModelsToLocalStorage(mapped);
       } else {
         const stored = localStorage.getItem('nova3d_community_models');
-        const listToSeed = stored ? JSON.parse(stored) : DEFAULT_MODELS;
+        let listToSeed: CommunityModel[] = [];
+        if (stored) {
+          try {
+            listToSeed = JSON.parse(stored).filter((m: any) => !hardcodedIds.includes(m.id));
+          } catch (e) {
+            listToSeed = [];
+          }
+        }
         setModels(listToSeed);
         try {
-          await supabase.from('community_models').insert(listToSeed.map(mapModelToDb));
+          if (listToSeed.length > 0) {
+            await supabase.from('community_models').insert(listToSeed.map(mapModelToDb));
+          }
         } catch (seedErr) {
           console.warn('Silent seeding failure:', seedErr);
         }
@@ -168,15 +109,17 @@ export function CommunityManager({ theme, t }: { theme: 'dark' | 'light'; t: any
     } catch (err) {
       console.warn('Supabase community_models query failed in admin panel. Falling back to LocalStorage.', err);
       const stored = localStorage.getItem('nova3d_community_models');
+      const hardcodedIds = ['bambu-poop-chute', 'articulated-cyber-dragon', 'modular-headset-holder', 'self-watering-pot'];
       if (stored) {
         try {
-          setModels(JSON.parse(stored));
+          const parsed = JSON.parse(stored).filter((m: any) => !hardcodedIds.includes(m.id));
+          setModels(parsed);
         } catch (e) {
-          setModels(DEFAULT_MODELS);
+          setModels([]);
         }
       } else {
-        setModels(DEFAULT_MODELS);
-        saveModelsToLocalStorage(DEFAULT_MODELS);
+        setModels([]);
+        saveModelsToLocalStorage([]);
       }
     }
   };
