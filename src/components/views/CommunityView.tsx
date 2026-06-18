@@ -461,10 +461,17 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
       alert('Por favor selecciona una imagen válida');
       return;
     }
+    const isGifFile = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
         const rawBase64 = event.target.result as string;
+        
+        // If it is a GIF image, set the animated hover target automatically
+        if (isGifFile) {
+          setNewGifUrl(rawBase64);
+        }
+
         const img = new Image();
         img.src = rawBase64;
         img.onload = () => {
@@ -491,7 +498,7 @@ export function CommunityView({ theme, t, user }: { theme: 'dark' | 'light'; t: 
           const ctx = canvas.getContext('2d');
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
-            const compressedUrl = canvas.toDataURL('image/jpeg', 0.6); // Compress to light JPEG
+            const compressedUrl = canvas.toDataURL('image/jpeg', 0.6); // Compress to light JPEG (static frame 0)
             setAttachedImage(compressedUrl);
           } else {
             setAttachedImage(rawBase64);

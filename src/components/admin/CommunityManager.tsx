@@ -196,10 +196,17 @@ export function CommunityManager({ theme, t }: { theme: 'dark' | 'light'; t: any
       });
       return;
     }
+    const isGifFile = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
         const rawBase64 = e.target.result as string;
+        
+        // Save the raw, animated GIF base64 string to play on hover
+        if (isGifFile) {
+          setGifUrl(rawBase64);
+        }
+
         const img = new Image();
         img.src = rawBase64;
         img.onload = () => {
