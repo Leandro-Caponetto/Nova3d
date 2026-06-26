@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, MapPin, Truck, ChevronRight, Star, Heart, Share2, 
   Shield, CreditCard, Sparkles, MessageSquare, Plus, Minus, X, Check,
-  Store, AlertCircle, ShoppingBag, Eye, RefreshCw
+  Store, AlertCircle, ShoppingBag, Eye, RefreshCw, Handshake
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Product } from '../../types';
@@ -782,9 +782,28 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="flex items-center gap-2 mb-6">
-                <img src="https://img.icons8.com/?size=100&id=D0VvT92C7F1a&format=png" alt="Mercado Pago" className="h-8 object-contain" />
-                <span className="font-black tracking-tighter text-blue-800 text-lg">MERCADO PAGO gateway</span>
+              <div className="flex items-center justify-between gap-2.5 mb-6 bg-blue-50/50 p-3.5 rounded-2xl border border-blue-100/70">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-1 rounded-xl shadow-xs border border-blue-100 shrink-0">
+                    <img 
+                      src="https://logowik.com/content/uploads/images/mercado-pago3162.logowik.com.webp" 
+                      alt="Mercado Pago Logo" 
+                      className="h-8 object-contain"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        // Fallback in case of network issues
+                        (e.target as HTMLImageElement).src = "https://upload.wikimedia.org/wikipedia/commons/b/b5/Mercado_Libre_logo.svg";
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-col leading-none">
+                    <span className="font-black tracking-tighter text-[#003057] text-sm uppercase">mercado pago</span>
+                    <span className="text-[10px] font-bold tracking-wider text-[#00aae4] uppercase mt-0.5">pasarela segura</span>
+                  </div>
+                </div>
+                <div className="bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase px-2.5 py-1 rounded-lg border border-emerald-200 tracking-wider">
+                  Oficial
+                </div>
               </div>
 
               {checkoutLoading ? (
@@ -819,13 +838,13 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r">
+                  <div className="bg-blue-50/60 border-l-4 border-blue-500 p-4 rounded-r">
                     <div className="flex gap-2 text-xs text-blue-800">
-                      <AlertCircle className="w-5 h-5 shrink-0" />
+                      <AlertCircle className="w-5 h-5 shrink-0 text-blue-600" />
                       <div>
-                        <p className="font-bold">Información de integración</p>
-                        <p className="mt-1 leading-relaxed">
-                          La pasarela está configurada. Si se provee la clave <code className="bg-blue-100/80 px-1 py-0.5 rounded font-mono">MP_ACCESS_TOKEN</code> en las variables de entorno, se creará un botón de cobro real. En caso contrario, operará en modo simulación de Sandbox.
+                        <p className="font-bold text-[#003057]">Información de pago seguro</p>
+                        <p className="mt-1 leading-relaxed text-[#004e82]">
+                          Estás por realizar tu compra mediante la pasarela segura de Mercado Pago. Podés abonar en cuotas con tarjeta de crédito, tarjeta de débito, dinero en cuenta o en efectivo mediante redes de pago. Tu dinero y datos están 100% protegidos.
                         </p>
                       </div>
                     </div>
