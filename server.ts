@@ -125,6 +125,175 @@ app.post("/api/mercadopago/preference", async (req, res) => {
   }
 });
 
+// API Route to process successful payment and send a beautifully formatted invoice email
+app.post("/api/mercadopago/success-payment", async (req, res) => {
+  const { product, quantity, totalAmount, payerEmail, locationText } = req.body;
+  const orderNumber = "NV" + Math.floor(100000 + Math.random() * 900000);
+  const currentDate = new Date().toLocaleDateString('es-AR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  console.log(`[PAYMENT APPROVED] Order ${orderNumber} for product "${product?.name}" (qty: ${quantity}) total: $${totalAmount}`);
+
+  try {
+    const resendClient = getResend();
+    if (resendClient && payerEmail) {
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Factura de Compra Nova3D</title>
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+            .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; }
+            .header { background-color: #0f172a; padding: 32px 24px; text-align: center; color: #ffffff; }
+            .header h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -1px; text-transform: uppercase; }
+            .header h1 span { color: #f97316; }
+            .header p { margin: 8px 0 0; font-size: 14px; opacity: 0.8; font-weight: 500; }
+            .status-badge { display: inline-block; background-color: #10b981; color: #ffffff; font-size: 11px; font-weight: 800; text-transform: uppercase; padding: 6px 14px; border-radius: 9999px; margin-top: 16px; letter-spacing: 1px; }
+            .body { padding: 32px 24px; }
+            .invoice-details { border-bottom: 2px dashed #f1f5f9; padding-bottom: 24px; margin-bottom: 24px; }
+            .details-grid { width: 100%; border-collapse: collapse; }
+            .details-grid td { padding: 6px 0; font-size: 13px; line-height: 1.5; vertical-align: top; }
+            .details-label { color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 11px; tracking: 0.5px; width: 35%; }
+            .details-value { color: #0f172a; font-weight: 500; }
+            .items-table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+            .items-table th { background-color: #f8fafc; color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+            .items-table td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+            .item-image { width: 48px; height: 48px; object-fit: contain; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; padding: 4px; }
+            .item-name { font-weight: 700; color: #0f172a; margin: 0; }
+            .item-category { font-size: 11px; color: #64748b; margin: 2px 0 0; }
+            .totals-container { margin-top: 24px; background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; }
+            .totals-row { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; color: #475569; }
+            .totals-row.grand-total { font-size: 18px; font-weight: 800; color: #0f172a; border-top: 1px solid #e2e8f0; margin-top: 12px; padding-top: 12px; }
+            .totals-row.grand-total .val { color: #3483fa; }
+            .next-steps { background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; margin-top: 32px; text-align: left; }
+            .next-steps h3 { margin: 0 0 8px; font-size: 14px; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.5px; }
+            .next-steps p { margin: 0; font-size: 13px; color: #1e3a1e; line-height: 1.6; }
+            .footer { background-color: #f1f5f9; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6; }
+            .footer a { color: #3483fa; text-decoration: none; font-weight: 600; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Nova<span>3D</span></h1>
+              <p>IMPRESIÓN 3D PREMIUM Y DISEÑO PERSONALIZADO</p>
+              <span class="status-badge">Comprobante de Pago Electrónico</span>
+            </div>
+            
+            <div class="body">
+              <div class="invoice-details">
+                <table class="details-grid">
+                  <tr>
+                    <td class="details-label">Número de Factura</td>
+                    <td class="details-value">#${orderNumber} (Factura Tipo B)</td>
+                  </tr>
+                  <tr>
+                    <td class="details-label">Fecha de Emisión</td>
+                    <td class="details-value">${currentDate}</td>
+                  </tr>
+                  <tr>
+                    <td class="details-label">Medio de Pago</td>
+                    <td class="details-value" style="color: #3483fa; font-weight: bold;">Mercado Pago (Acreditado)</td>
+                  </tr>
+                  <tr>
+                    <td class="details-label">Destinatario</td>
+                    <td class="details-value">${payerEmail}</td>
+                  </tr>
+                  <tr>
+                    <td class="details-label">Destino de Envío</td>
+                    <td class="details-value">Enviado a ${locationText || "Domicilio del Comprador"}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <h3 style="font-size: 15px; font-weight: 800; margin: 0 0 16px; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">Detalle del Pedido</h3>
+              
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th style="width: 15%;">Item</th>
+                    <th style="width: 50%;">Descripción</th>
+                    <th style="width: 15%; text-align: center;">Cant.</th>
+                    <th style="width: 20%; text-align: right;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="text-align: center;">
+                      <img src="${product?.images?.[0] || 'https://picsum.photos/seed/nova/100'}" class="item-image" alt="Product Image">
+                    </td>
+                    <td>
+                      <p class="item-name">${product?.name}</p>
+                      <p class="item-category">Material: PLA+ Premium de alta resistencia</p>
+                    </td>
+                    <td style="text-align: center; font-weight: 600;">${quantity}</td>
+                    <td style="text-align: right; font-weight: 700; color: #0f172a;">$ ${(product?.price * quantity).toLocaleString('es-AR')}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="totals-container">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="font-size: 14px; color: #475569; padding: 4px 0;">Subtotal</td>
+                    <td style="font-size: 14px; color: #0f172a; font-weight: 600; text-align: right;">$ ${(product?.price * quantity).toLocaleString('es-AR')}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size: 14px; color: #475569; padding: 4px 0;">Costo de Envío</td>
+                    <td style="font-size: 14px; color: #10b981; font-weight: bold; text-align: right;">¡GRATIS!</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size: 14px; color: #475569; padding: 4px 0;">IVA (21%)</td>
+                    <td style="font-size: 14px; color: #64748b; text-align: right;">Incluido</td>
+                  </tr>
+                  <tr style="border-top: 1px solid #e2e8f0;">
+                    <td style="font-size: 18px; font-weight: 800; color: #0f172a; padding: 12px 0 0;">Total Neto</td>
+                    <td style="font-size: 20px; font-weight: 800; color: #3483fa; text-align: right; padding: 12px 0 0;">$ ${Number(totalAmount).toLocaleString('es-AR')}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div class="next-steps">
+                <h3>Siguientes Pasos de tu Pedido:</h3>
+                <p>Nuestra granja de impresión 3D automatizada ya comenzó a procesar tu pedido. En las próximas horas recibirás un correo de seguimiento con el estado del diseño 3D y el despacho en la dirección proporcionada.</p>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>Este correo electrónico sirve como comprobante de pago oficial para tu transacción.</p>
+              <p>¿Tenés alguna duda o querés personalizar tu modelo? <br/>Escribinos a <a href="mailto:caponettopeppers@gmail.com">soporte@nova3d.com</a> o contactanos por nuestra línea directa.</p>
+              <p style="margin-top: 16px; font-size: 11px; opacity: 0.7;">&copy; 2026 Nova3D Argentina. Todos los derechos reservados.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      await resendClient.emails.send({
+        from: 'Nova3D <onboarding@resend.dev>',
+        to: [payerEmail, 'caponettopeppers@gmail.com'],
+        subject: `🧾 Tu factura de compra Nova3D - Orden #${orderNumber}`,
+        html: emailHtml
+      });
+      console.log(`[PAYMENT EMAIL] Invoice successfully sent to ${payerEmail}`);
+    } else {
+      console.warn("RESEND_API_KEY no configurada o falta email del pagador. Factura simulada en consola.");
+    }
+
+    res.json({ success: true, orderNumber });
+  } catch (error) {
+    console.error("Payment invoice email error:", error);
+    res.status(500).json({ success: false, error: "Failed to send invoice email" });
+  }
+});
+
 export default app;
 
 async function startServer() {

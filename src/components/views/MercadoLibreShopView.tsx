@@ -44,6 +44,55 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
   const [isEditingPostal, setIsEditingPostal] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   
+  // Favorites & Share States
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('ml_favorites');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [copied, setCopied] = useState(false);
+
+  const toggleFavorite = (productId: string) => {
+    setFavorites(prev => {
+      const updated = prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId];
+      try {
+        localStorage.setItem('ml_favorites', JSON.stringify(updated));
+      } catch (err) {
+        console.error(err);
+      }
+      return updated;
+    });
+  };
+
+  const handleCopyLink = (productId: string) => {
+    const url = `${window.location.origin}?product=${productId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  
+  // Image Hover Zoom states
+  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+  const [isHovering, setIsHovering] = useState(false);
+  
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    // Clamp values between 0 and 100
+    const clampedX = Math.max(0, Math.min(100, x));
+    const clampedY = Math.max(0, Math.min(100, y));
+    
+    setZoomPos({ x: clampedX, y: clampedY });
+  };
+  
   const selectedProductMeta = useMemo(() => {
     if (!selectedProduct) return null;
     return unpackMetadata(selectedProduct.description);
@@ -181,12 +230,32 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
     }
   };
 
-  const simulateSuccess = () => {
+  const simulateSuccess = async () => {
     setCheckoutLoading(true);
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/mercadopago/success-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          product: selectedProduct,
+          quantity: quantity,
+          totalAmount: (selectedProduct?.price || 0) * quantity,
+          payerEmail: user?.email || 'caponettopeppers@gmail.com',
+          locationText: locationText
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        console.log("Invoice email triggered successfully", data);
+      }
+    } catch (err) {
+      console.error("Error triggering invoice email", err);
+    } finally {
       setCheckoutLoading(false);
       setSimulatedPaymentSuccess(true);
-    }, 1500);
+    }
   };
 
   return (
@@ -501,28 +570,97 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
                   </div>
 
                   {/* Main Display Image */}
-                  <div className="flex-grow aspect-square bg-white border border-gray-100 rounded overflow-hidden p-6 flex items-center justify-center order-1 md:order-2 relative group/zoom">
+                  <div 
+                    className="flex-grow aspect-square bg-white border border-gray-100 rounded overflow-hidden p-6 flex items-center justify-center order-1 md:order-2 relative cursor-zoom-in group/zoom select-none"
+                    onMouseEnter={() => setIsHovering(true)}
+                    onMouseLeave={() => setIsHovering(false)}
+                    onMouseMove={handleMouseMove}
+                  >
                     <img 
                       src={selectedProduct.images[currentImgIdx]} 
                       alt={selectedProduct.name}
-                      className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover/zoom:scale-110" 
+                      className="w-full h-full object-contain mix-blend-multiply pointer-events-none" 
                       referrerPolicy="no-referrer"
                     />
                     
+                    {/* Semi-transparent Selector/Lens box (follows mouse) */}
+                    {isHovering && (
+                      <div 
+                        className="absolute border border-blue-400 bg-blue-400/10 pointer-events-none rounded shadow-sm z-10"
+                        style={{
+                          width: '33.333%',
+                          height: '33.333%',
+                          left: `${Math.max(16.667, Math.min(83.333, zoomPos.x))}%`,
+                          top: `${Math.max(16.667, Math.min(83.333, zoomPos.y))}%`,
+                          transform: 'translate(-50%, -50%)',
+                        }}
+                      />
+                    )}
+                    
                     {/* Share / Favorite mini float keys */}
-                    <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover/zoom:opacity-100 transition-opacity">
-                      <button className="p-2 bg-white rounded-full shadow border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors">
-                        <Heart className="w-4 h-4" />
+                    <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-100 md:opacity-0 md:group-hover/zoom:opacity-100 transition-opacity z-20">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(selectedProduct.id);
+                        }}
+                        className={cn(
+                          "p-2.5 bg-white rounded-full shadow-md border border-gray-200 hover:scale-110 active:scale-95 transition-all text-gray-600 cursor-pointer",
+                          favorites.includes(selectedProduct.id) && "text-red-500 bg-red-50 border-red-100"
+                        )}
+                        title={favorites.includes(selectedProduct.id) ? "Quitar de favoritos" : "Agregar a favoritos"}
+                      >
+                        <Heart className={cn("w-4.5 h-4.5 transition-colors", favorites.includes(selectedProduct.id) && "fill-red-500")} />
                       </button>
-                      <button className="p-2 bg-white rounded-full shadow border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors">
-                        <Share2 className="w-4 h-4" />
-                      </button>
+                      <div className="relative">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyLink(selectedProduct.id);
+                          }}
+                          className={cn(
+                            "p-2.5 bg-white rounded-full shadow-md border border-gray-200 hover:scale-110 active:scale-95 transition-all text-gray-600 cursor-pointer",
+                            copied && "text-blue-500 bg-blue-50 border-blue-100"
+                          )}
+                          title="Copiar enlace"
+                        >
+                          <Share2 className="w-4.5 h-4.5" />
+                        </button>
+                        {copied && (
+                          <div className="absolute right-12 top-1/2 -translate-y-1/2 bg-zinc-900 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap z-50 animate-fade-in flex items-center gap-1.5 border border-zinc-800">
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            ¡Enlace copiado!
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Right Side: Product Purchase Block (5 cols) */}
-                <div className="md:col-span-5 border border-gray-200 rounded-md p-6 bg-white shadow-sm flex flex-col h-fit">
+                <div className="md:col-span-5 border border-gray-200 rounded-md p-6 bg-white shadow-sm flex flex-col h-fit relative">
+                  {isHovering && (
+                    <div className="absolute inset-0 bg-white z-40 rounded-md overflow-hidden flex flex-col border-2 border-blue-100 shadow-xl animate-fade-in">
+                      <div className="w-full h-full relative overflow-hidden bg-white flex items-center justify-center">
+                        <div 
+                          className="absolute w-full h-full bg-no-repeat pointer-events-none"
+                          style={{
+                            backgroundImage: `url(${selectedProduct.images[currentImgIdx]})`,
+                            backgroundSize: '300%', // 3x zoom
+                            backgroundPosition: `${zoomPos.x}% ${zoomPos.y}%`,
+                            width: '100%',
+                            height: '100%',
+                          }}
+                        />
+                        {/* Elegant live-zoom overlay badge */}
+                        <div className="absolute bottom-3 left-3 bg-zinc-900/90 text-white text-[10px] font-black px-2.5 py-1 rounded-md shadow-sm tracking-widest uppercase flex items-center gap-1.5 backdrop-blur-xs select-none">
+                          <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-ping" />
+                          Zoom de Detalle
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="space-y-4">
                     
                     {/* State tags */}
