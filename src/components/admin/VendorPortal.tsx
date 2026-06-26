@@ -5,6 +5,25 @@ import { cn } from '../../lib/utils';
 import { AlertModal } from '../common/AlertModal';
 import { ConfirmModal } from '../common/ConfirmModal';
 
+const packMetadata = (desc: string, mpLink: string, disc: number, freeShip: boolean) => {
+  const metaObj = { mpLink, disc, freeShip };
+  return `${desc}\n\n[ML_METADATA:${JSON.stringify(metaObj)}]`;
+};
+
+const unpackMetadata = (fullDesc: string) => {
+  const match = fullDesc?.match(/\[ML_METADATA:(.*)\]$/);
+  if (match) {
+    try {
+      const meta = JSON.parse(match[1]);
+      const desc = fullDesc.replace(/\n\n\[ML_METADATA:.*\]$/, '');
+      return { desc, mpLink: meta.mpLink || '', disc: meta.disc || 0, freeShip: !!meta.freeShip };
+    } catch (e) {
+      // Ignore
+    }
+  }
+  return { desc: fullDesc || '', mpLink: '', disc: 0, freeShip: false };
+};
+
 export function VendorPortal({ theme, t, onProductChange }: any) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
@@ -13,6 +32,10 @@ export function VendorPortal({ theme, t, onProductChange }: any) {
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [mpLink, setMpLink] = useState('');
+  const [mpDiscount, setMpDiscount] = useState('10');
+  const [mpFreeShipping, setMpFreeShipping] = useState(true);
 
   const [alert, setAlert] = useState<{ open: boolean; title: string; message: string; type: 'error' | 'success' | 'info' }>({
     open: false,
@@ -70,6 +93,9 @@ export function VendorPortal({ theme, t, onProductChange }: any) {
 
   const cancelEdit = () => {
     setEditingId(null);
+    setMpLink('');
+    setMpDiscount('10');
+    setMpFreeShipping(true);
     setNewProduct({ 
       name: '', 
       price: '', 
@@ -88,10 +114,15 @@ export function VendorPortal({ theme, t, onProductChange }: any) {
 
   const handleEdit = (product: any) => {
     setEditingId(product.id);
+    const unpacked = unpackMetadata(product.description);
+    setMpLink(unpacked.mpLink);
+    setMpDiscount(unpacked.disc.toString());
+    setMpFreeShipping(unpacked.freeShip);
+
     setNewProduct({
       name: product.name,
       price: product.price.toString(),
-      description: product.description,
+      description: unpacked.desc,
       category: product.category,
       price_per_gram: product.price_per_gram?.toString() || '',
       price_per_hour: product.price_per_hour?.toString() || '',
@@ -123,12 +154,15 @@ export function VendorPortal({ theme, t, onProductChange }: any) {
           .from('products')
           .upload(filePath, file);
 
-        if (!uploadError) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('products')
-            .getPublicUrl(filePath);
-          uploadedImageUrls.push(publicUrl);
+        if (uploadError) {
+          console.error('Upload Error:', uploadError);
+          throw new Error(`Error al subir la imagen "${file.name}": ${uploadError.message}. Asegúrate de que el bucket "products" esté creado en Supabase.`);
         }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('products')
+          .getPublicUrl(filePath);
+        uploadedImageUrls.push(publicUrl);
       }
 
       // If no files and no previous images, use placeholder
@@ -136,10 +170,12 @@ export function VendorPortal({ theme, t, onProductChange }: any) {
         uploadedImageUrls.push('https://picsum.photos/seed/nova/800/600');
       }
 
+      const packedDescription = packMetadata(newProduct.description, mpLink, parseInt(mpDiscount) || 0, mpFreeShipping);
+
       const productData = {
         name: newProduct.name,
         price: parseFloat(newProduct.price),
-        description: newProduct.description,
+        description: packedDescription,
         category: newProduct.category,
         images: uploadedImageUrls,
         price_per_gram: newProduct.price_per_gram ? parseFloat(newProduct.price_per_gram) : null,
@@ -175,6 +211,9 @@ export function VendorPortal({ theme, t, onProductChange }: any) {
 
       // Reset
       setEditingId(null);
+      setMpLink('');
+      setMpDiscount('10');
+      setMpFreeShipping(true);
       setNewProduct({ 
         name: '', 
         price: '', 
@@ -429,6 +468,50 @@ export function VendorPortal({ theme, t, onProductChange }: any) {
                 theme === 'dark' ? "bg-black/40 border-white/10" : "bg-zinc-50 border-zinc-200")} 
               required
             />
+          </div>
+
+          {/* MÓDULO MERCADO PAGO INTEGRATION */}
+          <div className="mb-12 border-t border-zinc-500/10 pt-8">
+            <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-primary mb-6 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary animate-pulse" /> CONFIGURACIÓN_MERCADO_PAGO_Y_TIENDA_ML
+            </h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="space-y-4">
+                <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 ml-2">PREFERENCIA_ID_O_LINK_DIRECTO_MP</label>
+                <input 
+                  value={mpLink}
+                  onChange={(e) => setMpLink(e.target.value)}
+                  placeholder="https://mpago.la/..." 
+                  className={cn("w-full border rounded-2xl p-6 text-[12px] font-black tracking-widest focus:outline-none focus:border-primary transition-all",
+                    theme === 'dark' ? "bg-black/40 border-white/10" : "bg-zinc-50 border-zinc-200")} 
+                />
+              </div>
+
+              <div className="space-y-4">
+                <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 ml-2">DESCUENTO_EN_TIENDA_ML ( % )</label>
+                <input 
+                  type="number"
+                  value={mpDiscount}
+                  onChange={(e) => setMpDiscount(e.target.value)}
+                  placeholder="10" 
+                  className={cn("w-full border rounded-2xl p-6 text-[12px] font-black tracking-widest focus:outline-none focus:border-primary transition-all",
+                    theme === 'dark' ? "bg-black/40 border-white/10" : "bg-zinc-50 border-zinc-200")} 
+                />
+              </div>
+
+              <div className="flex items-center gap-4 h-full md:pt-8 pl-4">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="checkbox" 
+                    checked={mpFreeShipping} 
+                    onChange={(e) => setMpFreeShipping(e.target.checked)}
+                    className="w-5 h-5 rounded border-primary/20 bg-black/40 text-primary focus:ring-primary/40"
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-primary transition-colors">OFRECER_ENVÍO_GRATIS</span>
+                </label>
+              </div>
+            </div>
           </div>
           
           <button 

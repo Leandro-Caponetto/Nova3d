@@ -21,6 +21,19 @@ export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhats
 }) {
   const [news, setNews] = useState<any[]>([]);
   const featured = products?.slice(0, 3) || [];
+  const [mouse, setMouse] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+      const y = (e.clientY / window.innerHeight) * 2 - 1;
+      setMouse({ x, y });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -71,20 +84,78 @@ export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhats
             </span>
           </motion.div>
           
-          <h1 className="text-5xl md:text-[120px] lg:text-[140px] tracking-tighter mb-10 leading-[0.85] uppercase relative transition-all">
-            <span className={cn(
-              "font-light tracking-tight block mb-2",
-              theme === 'dark' ? "text-3d-steel-dark" : "text-3d-steel-light"
-            )}>
-              {t.heroTitle1}
-            </span>
-            <span className={cn(
-              "font-black italic block",
-              theme === 'dark' ? "text-3d-cyan-dark" : "text-3d-cyan-light"
-            )}>
-              {t.heroTitle2}
-            </span>
-          </h1>
+          <div className="relative mb-14 select-none group">
+            {/* Ambient Cyan/White Neon Backglow (Emission/refraction onto screen and space behind) */}
+            <h1 
+              style={{
+                transform: `translate(${mouse.x * -15}px, ${mouse.y * -15}px) scale(0.98)`,
+                transition: 'transform 0.15s ease-out'
+              }}
+              className="text-5xl md:text-[120px] lg:text-[140px] tracking-tighter leading-[0.85] uppercase absolute inset-0 pointer-events-none opacity-45 dark:opacity-60 blur-[32px] md:blur-[48px] z-0 select-none"
+            >
+              <span className="font-light tracking-tight block mb-2 text-orange-500/30 dark:text-orange-400/25">
+                {t.heroTitle1}
+              </span>
+              <span className="font-black italic block text-cyan-400/40 dark:text-cyan-400/35">
+                {t.heroTitle2}
+              </span>
+            </h1>
+
+            {/* Deep Cast Shadow (Simulates projection onto the background rotating planet) */}
+            <h1 
+              style={{
+                transform: `translate(${mouse.x * -28}px, ${mouse.y * -28}px) scale(1.005)`,
+                transition: 'transform 0.18s ease-out'
+              }}
+              className="text-5xl md:text-[120px] lg:text-[140px] tracking-tighter leading-[0.85] uppercase absolute inset-0 pointer-events-none opacity-60 dark:opacity-85 blur-[12px] md:blur-[20px] z-0 select-none mix-blend-multiply dark:mix-blend-normal"
+            >
+              <span className="font-light tracking-tight block mb-2 text-black/80 dark:text-black">
+                {t.heroTitle1}
+              </span>
+              <span className="font-black italic block text-black/90 dark:text-black">
+                {t.heroTitle2}
+              </span>
+            </h1>
+
+            {/* Sharp Contact Shadow (Provides immediate crisp depth perception relative to the letters) */}
+            <h1 
+              style={{
+                transform: `translate(${mouse.x * -10}px, ${mouse.y * -10}px) scale(1.002)`,
+                transition: 'transform 0.1s ease-out'
+              }}
+              className="text-5xl md:text-[120px] lg:text-[140px] tracking-tighter leading-[0.85] uppercase absolute inset-0 pointer-events-none opacity-80 blur-[4px] md:blur-[6px] z-0 select-none mix-blend-multiply dark:mix-blend-normal"
+            >
+              <span className="font-light tracking-tight block mb-2 text-black/70 dark:text-zinc-950/90">
+                {t.heroTitle1}
+              </span>
+              <span className="font-black italic block text-black/85 dark:text-zinc-950/90">
+                {t.heroTitle2}
+              </span>
+            </h1>
+
+            {/* Primary Interactive Front 3D Text Panel - Completely Static & Clean */}
+            <h1 
+              style={{
+                textShadow: theme === 'dark' 
+                  ? '0 2px 10px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.5)'
+                  : '0 2px 10px rgba(0,0,0,0.15), 0 8px 20px rgba(0,0,0,0.1)'
+              }}
+              className="text-5xl md:text-[120px] lg:text-[140px] tracking-tighter leading-[0.85] uppercase relative z-10 pointer-events-none"
+            >
+              <span className={cn(
+                "font-light tracking-tight block mb-2",
+                theme === 'dark' ? "text-3d-steel-dark" : "text-3d-steel-light"
+              )}>
+                {t.heroTitle1}
+              </span>
+              <span className={cn(
+                "font-black italic block",
+                theme === 'dark' ? "text-3d-cyan-dark" : "text-3d-cyan-light"
+              )}>
+                {t.heroTitle2}
+              </span>
+            </h1>
+          </div>
           
           <p className={cn("max-w-2xl mx-auto text-base mb-16 tracking-wide leading-relaxed font-medium transition-colors",
             theme === 'dark' ? "text-zinc-400" : "text-zinc-600")}>

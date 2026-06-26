@@ -26,6 +26,7 @@ export function Navbar({
   const navLinks = [
     { id: 'home', label: t.home },
     { id: 'gallery', label: t.catalog },
+    { id: 'shop', label: t.shop },
     { id: 'community', label: t.community },
     { id: 'quote', label: t.quote },
     { id: 'contact', label: t.contact },
@@ -33,14 +34,14 @@ export function Navbar({
   ];
 
   return (
-    <nav className="sticky top-0 z-50 transition-all duration-300 pointer-events-none">
+    <nav className="sticky top-0 z-[100] transition-all duration-300 pointer-events-none">
       <div className={cn("relative z-10 border-b pointer-events-auto", 
         theme === 'dark' ? "bg-bg-base/80 backdrop-blur-md border-white/5" : "bg-bg-base/80 backdrop-blur-md border-zinc-200")}>
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 cursor-pointer group flex-shrink-0" onClick={() => setActiveTab('home')}>
             <Nova3DLogo theme={theme} />
             <span className={cn("text-2xl font-black tracking-tighter uppercase italic hidden sm:inline", theme === 'dark' ? "text-white" : "text-black")}>
-              NOVA<span className="text-[#f59e0b] drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] transition-colors group-hover:text-primary-light">3D</span>
+              NOVA<span className="text-primary glow-text transition-all group-hover:text-primary-light">3D</span>
             </span>
           </div>
 

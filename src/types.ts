@@ -11,6 +11,7 @@ export interface Product {
   sizes?: string[];
   material?: string;
   rating?: number;
+  is_featured?: boolean;
 }
 
 export interface CartItem extends Product {

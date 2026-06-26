@@ -25,6 +25,7 @@ import { ContactView } from './components/views/ContactView';
 import { SubscriptionDetailsView } from './components/views/SubscriptionDetailsView';
 import { CheckoutView } from './components/views/CheckoutView';
 import { CommunityView } from './components/views/CommunityView';
+import { MercadoLibreShopView } from './components/views/MercadoLibreShopView';
 
 // Common Components
 import { WhatsAppButton } from './components/common/WhatsAppButton';
@@ -40,7 +41,7 @@ export default function App() {
   const t = TRANSLATIONS[lang];
 
   // App State
-  const [currentTab, setCurrentTab] = useState<'home' | 'gallery' | 'community' | 'quote' | 'cart' | 'admin' | 'contact' | 'subscription-details' | 'checkout'>('home');
+  const [currentTab, setCurrentTab] = useState<'home' | 'gallery' | 'community' | 'quote' | 'cart' | 'admin' | 'contact' | 'subscription-details' | 'checkout' | 'shop'>('home');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -132,12 +133,12 @@ export default function App() {
   const removeFromCart = (id: string) => setCart(prev => prev.filter(item => item.id !== id));
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
-  const setActiveTab = (tab: 'home' | 'gallery' | 'community' | 'quote' | 'cart' | 'admin' | 'contact' | 'subscription-details' | 'checkout') => {
+  const setActiveTab = (tab: 'home' | 'gallery' | 'community' | 'quote' | 'cart' | 'admin' | 'contact' | 'subscription-details' | 'checkout' | 'shop') => {
     if (tab === 'admin' && !isAdmin) {
       if (!user) setIsAuthModalOpen(true);
       return;
     }
-    if (tab !== 'home' && tab !== 'gallery' && tab !== 'community' && tab !== 'contact' && tab !== 'subscription-details' && !user) {
+    if (tab !== 'home' && tab !== 'gallery' && tab !== 'shop' && tab !== 'community' && tab !== 'contact' && tab !== 'subscription-details' && !user) {
       setIsAuthModalOpen(true);
       return;
     }
@@ -189,6 +190,7 @@ export default function App() {
               />
             )}
             {currentTab === 'gallery' && <GalleryView key="gallery" products={products} addToCart={addToCart} t={t} theme={theme} onWhatsApp={setWsProduct} searchQuery={searchQuery} setSearchQuery={setSearchQuery} user={user} />}
+            {currentTab === 'shop' && <MercadoLibreShopView key="shop" products={products} addToCart={addToCart} theme={theme} t={t} user={user} />}
             {currentTab === 'community' && <CommunityView key="community" theme={theme} t={t} user={user} />}
             {currentTab === 'quote' && <QuoteView key="quote" products={products} addToCart={addToCart} t={t} theme={theme} />}
             {currentTab === 'cart' && <CartView key="cart" cart={cart} remove={removeFromCart} products={products} t={t} theme={theme} />}

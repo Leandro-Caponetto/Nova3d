@@ -52,6 +52,79 @@ app.post("/api/subscribe", async (req, res) => {
   }
 });
 
+// API Route for Mercado Pago checkout preference
+app.post("/api/mercadopago/preference", async (req, res) => {
+  const { items, payerEmail } = req.body;
+  const accessToken = process.env.MP_ACCESS_TOKEN;
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, error: "El carrito está vacío" });
+  }
+
+  // Generate a friendly mock if the access token is not configured
+  if (!accessToken) {
+    console.warn("MP_ACCESS_TOKEN no configurado en variables de entorno. Usando Sandbox Mock.");
+    
+    // Simulate a Mercado Pago Sandbox checkout link based on total sum
+    const total = items.reduce((acc: number, curr: any) => acc + (curr.price * (curr.quantity || 1)), 0);
+    const mockPrefId = "pref_" + Math.random().toString(36).substring(2, 12);
+    
+    // We return a beautiful custom visual screen simulating the MP checkout,
+    // or standard sandbox links if they prefer. Let's make it go to a beautiful simulation redirect
+    // so they can see exactly how it looks and transitions!
+    return res.json({ 
+      init_point: `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${mockPrefId}`,
+      preferenceId: mockPrefId,
+      is_sandbox: true,
+      total: total
+    });
+  }
+
+  try {
+    const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        items: items.map((item: any) => ({
+          id: item.id || Math.random().toString(36).substring(2, 6),
+          title: item.name,
+          quantity: item.quantity || 1,
+          unit_price: Number(item.price),
+          currency_id: "ARS",
+          picture_url: item.images && item.images[0] ? item.images[0] : undefined
+        })),
+        payer: {
+          email: payerEmail || "comprador@nova3d.com"
+        },
+        back_urls: {
+          success: `${req.headers.origin || 'http://localhost:3000'}/?payment_status=success`,
+          failure: `${req.headers.origin || 'http://localhost:3000'}/?payment_status=failure`,
+          pending: `${req.headers.origin || 'http://localhost:3000'}/?payment_status=pending`
+        },
+        auto_return: "approved"
+      })
+    });
+
+    const data = await response.json();
+    if (data.init_point) {
+      res.json({ 
+        init_point: data.init_point, 
+        preferenceId: data.id,
+        is_sandbox: false 
+      });
+    } else {
+      console.error("Error de Mercado Pago:", data);
+      res.status(400).json({ success: false, error: data.message || "No se pudo generar la preferencia de pago" });
+    }
+  } catch (error: any) {
+    console.error("Mercado Pago error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 export default app;
 
 async function startServer() {
