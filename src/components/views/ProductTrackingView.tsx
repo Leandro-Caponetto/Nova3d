@@ -8,6 +8,178 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Product } from '../../types';
+import { APIProvider, Map, AdvancedMarker, Pin, useMap } from '@vis.gl/react-google-maps';
+
+// Google Maps API Key Setup
+const API_KEY =
+  process.env.GOOGLE_MAPS_PLATFORM_KEY ||
+  (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
+  (globalThis as any).GOOGLE_MAPS_PLATFORM_KEY ||
+  '';
+const hasValidKey = Boolean(API_KEY) && API_KEY !== 'YOUR_API_KEY';
+
+// Google Maps Polyline Component
+interface PolylineProps {
+  path: google.maps.LatLngLiteral[];
+  options?: google.maps.PolylineOptions;
+}
+
+function MapPolyline({ path, options }: PolylineProps) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+
+    const polyline = new google.maps.Polyline({
+      path,
+      map,
+      ...options,
+    });
+
+    return () => {
+      polyline.setMap(null);
+    };
+  }, [map, path, options]);
+
+  return null;
+}
+
+// Google Maps Pan/Camera Controller
+function MapController({ 
+  center, 
+  followDriver, 
+  onMapDrag 
+}: { 
+  center: google.maps.LatLngLiteral; 
+  followDriver: boolean;
+  onMapDrag: () => void;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || !followDriver) return;
+    map.panTo(center);
+  }, [map, center.lat, center.lng, followDriver]);
+
+  useEffect(() => {
+    if (!map) return;
+    const listener = map.addListener('dragstart', onMapDrag);
+    return () => {
+      google.maps.event.removeListener(listener);
+    };
+  }, [map, onMapDrag]);
+
+  return null;
+}
+
+// Google Maps Styled Dark Theme
+const mapDarkStyles: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#0f172a" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0f172a" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
+  {
+    featureType: "administrative.locality",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#cbd5e1" }]
+  },
+  {
+    featureType: "poi",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#64748b" }]
+  },
+  {
+    featureType: "poi.park",
+    elementType: "geometry",
+    stylers: [{ color: "#022c22" }]
+  },
+  {
+    featureType: "poi.park",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#10b981" }]
+  },
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#1e293b" }]
+  },
+  {
+    featureType: "road",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#334155" }]
+  },
+  {
+    featureType: "road",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#94a3b8" }]
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry",
+    stylers: [{ color: "#334155" }]
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#475569" }]
+  },
+  {
+    featureType: "road.highway",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#f8fafc" }]
+  },
+  {
+    featureType: "transit",
+    elementType: "geometry",
+    stylers: [{ color: "#1e293b" }]
+  },
+  {
+    featureType: "transit.station",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#cbd5e1" }]
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#0f1e40" }]
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#3b82f6" }]
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.stroke",
+    stylers: [{ color: "#0f1e40" }]
+  }
+];
+
+// Google Maps Styled Light Theme
+const mapLightStyles: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#f8fafc" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#475569" }] },
+  {
+    featureType: "poi.park",
+    elementType: "geometry",
+    stylers: [{ color: "#f0fdf4" }]
+  },
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#ffffff" }]
+  },
+  {
+    featureType: "road",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#e2e8f0" }]
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#e0f2fe" }]
+  }
+];
 
 interface ProductTrackingViewProps {
   product: Product | null;
@@ -47,6 +219,52 @@ export function ProductTrackingView({
   const [progress, setProgress] = useState(35); // Initial progress starts halfway through transit
   const [simulationSpeed, setSimulationSpeed] = useState(1); // multiplier
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<number | null>(null);
+
+  // Google Maps state variables
+  const [useGoogleMaps, setUseGoogleMaps] = useState(hasValidKey);
+  const [followDriver, setFollowDriver] = useState(true);
+
+  // Real geographic coordinates for Google Maps (Buenos Aires, Argentina)
+  const geoCheckpoints = useMemo(() => [
+    { lat: -34.5889, lng: -58.4306, label: "Fábrica Nova3D", sub: "Palermo, CABA", emoji: "🏢" },
+    { lat: -34.5612, lng: -58.4563, label: "Centro de Clasificación Flex", sub: "Belgrano, CABA", emoji: "📦" },
+    { lat: -34.5385, lng: -58.4751, label: "Av. General Paz Checkpoint", sub: "Límite CABA", emoji: "🛣️" },
+    { lat: -34.5106, lng: -58.4984, label: "Distribuidora Zona Norte", sub: "Olivos", emoji: "🏪" },
+    { lat: -34.4815, lng: -58.5226, label: "Tu Domicilio", sub: locationText || "San Isidro, GBA", emoji: "🏠" }
+  ], [locationText]);
+
+  // Calculate latitude and longitude at progress percent
+  const getLatLngAtProgress = (pct: number) => {
+    const pointCount = geoCheckpoints.length;
+    if (pointCount === 0) return { lat: -34.5889, lng: -58.4306, heading: 0 };
+    if (pct <= 0) {
+      const pA = geoCheckpoints[0];
+      const pB = geoCheckpoints[1];
+      const heading = Math.atan2(pB.lng - pA.lng, pB.lat - pA.lat) * (180 / Math.PI);
+      return { lat: pA.lat, lng: pA.lng, heading };
+    }
+    if (pct >= 100) {
+      const pA = geoCheckpoints[pointCount - 2];
+      const pB = geoCheckpoints[pointCount - 1];
+      const heading = Math.atan2(pB.lng - pA.lng, pB.lat - pA.lat) * (180 / Math.PI);
+      return { lat: pB.lat, lng: pB.lng, heading };
+    }
+
+    const segmentWidth = 100 / (pointCount - 1);
+    const index = Math.min(pointCount - 2, Math.floor(pct / segmentWidth));
+    const segmentPct = (pct % segmentWidth) / segmentWidth;
+
+    const pA = geoCheckpoints[index];
+    const pB = geoCheckpoints[index + 1];
+
+    const lat = pA.lat + (pB.lat - pA.lat) * segmentPct;
+    const lng = pA.lng + (pB.lng - pA.lng) * segmentPct;
+    const heading = Math.atan2(pB.lng - pA.lng, pB.lat - pA.lat) * (180 / Math.PI);
+
+    return { lat, lng, heading };
+  };
+
+  const currentLatLng = getLatLngAtProgress(progress);
 
   // Email simulator states
   const [showEmailSimulator, setShowEmailSimulator] = useState(false);
@@ -219,48 +437,9 @@ export function ProductTrackingView({
         
         {/* Left Side: Interactive SVG Map Container */}
         <div className="lg:col-span-8 space-y-4">
-          
           {/* Map wrapper */}
-          <div className="relative bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden select-none">
+          <div className="relative bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden select-none" style={{ height: '480px' }}>
             
-            {/* Map Header / Live Stats HUD */}
-            <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-xl p-4 shadow-lg text-white">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center border border-blue-500/30">
-                  <Truck className="w-5 h-5 animate-pulse" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest block">Estado del Repartidor</span>
-                  <span className="text-sm font-bold flex items-center gap-1.5 text-blue-300">
-                    {progress >= 100 ? (
-                      <span className="text-green-400 flex items-center gap-1">¡Entregado con éxito!</span>
-                    ) : progress >= 75 ? (
-                      "Ramiro está a pocas cuadras"
-                    ) : (
-                      "En viaje por Autopista"
-                    )}
-                  </span>
-                </div>
-              </div>
-
-              {/* ETA / Distance Info blocks */}
-              <div className="flex items-center gap-6 divide-x divide-slate-800">
-                <div className="text-right">
-                  <span className="text-[9px] text-slate-400 uppercase font-bold block">Distancia Restante</span>
-                  <span className="text-lg font-black font-mono text-white">
-                    {progress >= 100 ? "0.0" : distanceRemaining} <span className="text-xs text-slate-400">km</span>
-                  </span>
-                </div>
-                <div className="pl-6 text-right">
-                  <span className="text-[9px] text-slate-400 uppercase font-bold block">Tiempo Estimado (ETA)</span>
-                  <span className="text-lg font-black font-mono text-orange-400 flex items-center gap-1">
-                    <Clock className="w-4 h-4 text-orange-400 inline" /> 
-                    {progress >= 100 ? "Llegó" : `~${etaMinutes} min`}
-                  </span>
-                </div>
-              </div>
-            </div>
-
             {/* Map Header / Live Stats HUD */}
             <div className="absolute top-4 left-4 right-4 z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl p-4 shadow-xl text-white">
               <div className="flex items-center gap-3">
@@ -294,360 +473,379 @@ export function ProductTrackingView({
               </div>
             </div>
 
-            {/* Interactive Custom SVG Map */}
-            <div className="w-full aspect-video md:aspect-[16/9] min-h-[340px] relative">
-              <svg 
-                viewBox="0 0 800 500" 
-                className="w-full h-full bg-[#0b1329] transition-all duration-300"
-                style={{ 
-                  backgroundImage: 'radial-gradient(rgba(51, 65, 85, 0.25) 1px, transparent 1px)', 
-                  backgroundSize: '20px 20px' 
-                }}
-              >
-                {/* Embedded SVG styles for high-end animations */}
-                <style>{`
-                  @keyframes flow-dash {
-                    to {
-                      stroke-dashoffset: -40;
-                    }
-                  }
-                  .animated-flow-line {
-                    stroke-dasharray: 10 8;
-                    animation: flow-dash 1.5s linear infinite;
-                  }
-                  @keyframes pulse-ring-glow {
-                    0% { transform: scale(0.9) opacity: 0.9; }
-                    50% { transform: scale(1.15) opacity: 0.4; }
-                    100% { transform: scale(1.4) opacity: 0; }
-                  }
-                  .pulsing-halo-map {
-                    animation: pulse-ring-glow 2.5s ease-out infinite;
-                  }
-                `}</style>
-
-                <defs>
-                  {/* Gradients for Water, Parks and Route */}
-                  <linearGradient id="riverGrad" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#1a2e5a" stopOpacity="0.85" />
-                    <stop offset="100%" stopColor="#0f1e40" stopOpacity="0.95" />
-                  </linearGradient>
-                  
-                  <linearGradient id="parkGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#047857" stopOpacity="0.18" />
-                    <stop offset="100%" stopColor="#065f46" stopOpacity="0.10" />
-                  </linearGradient>
-
-                  <radialGradient id="vehicleRadar" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-                  </radialGradient>
-                  
-                  <filter id="shadowGlow" x="-10%" y="-10%" width="120%" height="120%">
-                    <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.5" />
-                  </filter>
-                </defs>
-
-                {/* A. GEOGRAPHIC BACKGROUND LAYERS */}
-                
-                {/* 1. Río de la Plata (Water body on top-right coast) */}
-                <path 
-                  d="M 320,0 C 440,70 580,120 800,160 L 800,0 Z" 
-                  fill="url(#riverGrad)" 
-                  stroke="#1d4ed8" 
-                  strokeWidth="1.5"
-                  opacity="0.85" 
-                />
-                
-                {/* Waves lines inside River */}
-                <path d="M 450,25 Q 490,40 530,25" fill="none" stroke="#2563eb" strokeWidth="1" opacity="0.3" />
-                <path d="M 600,50 Q 640,65 680,50" fill="none" stroke="#2563eb" strokeWidth="1" opacity="0.3" />
-                <path d="M 700,100 Q 730,110 760,100" fill="none" stroke="#2563eb" strokeWidth="1" opacity="0.3" />
-                
-                {/* Water Body Label */}
-                <text x="640" y="45" fill="#3b82f6" fontSize="9" fontWeight="black" letterSpacing="1.5" opacity="0.4" transform="rotate(11, 640, 45)">RÍO DE LA PLATA</text>
-
-                {/* 2. Green Spaces & Parks (Bosques de Palermo, Vicente López Reserve) */}
-                {/* Bosques de Palermo near Origin */}
-                <path 
-                  d="M 60,350 C 90,320 180,310 200,340 C 210,380 160,420 120,410 C 80,400 50,380 60,350 Z" 
-                  fill="url(#parkGrad)" 
-                  stroke="#10b981" 
-                  strokeWidth="1" 
-                  strokeDasharray="4 2"
-                  opacity="0.6" 
-                />
-                <text x="125" y="365" fill="#10b981" fontSize="8" fontWeight="bold" letterSpacing="0.5" opacity="0.5">Bosques de Palermo</text>
-
-                {/* Parque de la Costa / Green Belt near Suburbs node */}
-                <path 
-                  d="M 500,140 C 530,110 610,130 630,160 C 640,190 590,210 560,200 C 530,190 490,170 500,140 Z" 
-                  fill="url(#parkGrad)" 
-                  stroke="#10b981" 
-                  strokeWidth="1" 
-                  strokeDasharray="4 2"
-                  opacity="0.6" 
-                />
-                <text x="560" y="165" fill="#10b981" fontSize="8" fontWeight="bold" letterSpacing="0.5" opacity="0.5">Reserva Costera Norte</text>
-
-                {/* B. SECONDARY STREET GRID (Simulates detailed city block layout) */}
-                <g stroke="#1e293b" strokeWidth="1" opacity="0.5">
-                  {/* Horizontal streets */}
-                  <line x1="0" y1="180" x2="800" y2="180" />
-                  <line x1="0" y1="220" x2="800" y2="220" />
-                  <line x1="0" y1="280" x2="800" y2="280" />
-                  <line x1="0" y1="340" x2="800" y2="340" />
-                  <line x1="0" y1="400" x2="800" y2="400" />
-                  <line x1="0" y1="460" x2="800" y2="460" />
-                  
-                  {/* Vertical streets */}
-                  <line x1="100" y1="0" x2="100" y2="500" />
-                  <line x1="200" y1="0" x2="200" y2="500" />
-                  <line x1="320" y1="0" x2="320" y2="500" />
-                  <line x1="440" y1="0" x2="440" y2="500" />
-                  <line x1="560" y1="0" x2="560" y2="500" />
-                  <line x1="680" y1="0" x2="680" y2="500" />
-                </g>
-
-                {/* Diagonal streets */}
-                <g stroke="#1e293b" strokeWidth="1.5" opacity="0.4">
-                  {decorativeRoads.map((road, i) => (
-                    <line key={`dec-${i}`} x1={road.x1} y1={road.y1} x2={road.x2} y2={road.y2} />
-                  ))}
-                </g>
-
-                {/* C. MAIN EXPRESSWAYS / HIGHLIGHTED ROAD SYSTEM */}
-                {/* Autopista Lugones / Panamericana Gray Underlayer */}
-                <g stroke="#1e293b" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" opacity="0.8">
-                  <path d="M 120 400 L 720 120" fill="none" />
-                  <path d="M 50 450 Q 250 350 450 250 T 750 150" fill="none" />
-                </g>
-                <g stroke="#334155" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" opacity="0.9">
-                  <path d="M 120 400 L 720 120" fill="none" />
-                  <path d="M 50 450 Q 250 350 450 250 T 750 150" fill="none" />
-                </g>
-                {/* Dashed center markings on main expressway */}
-                <g stroke="#475569" strokeWidth="1" strokeDasharray="5 5" fill="none" opacity="0.7">
-                  <path d="M 120 400 L 720 120" />
-                  <path d="M 50 450 Q 250 350 450 250 T 750 150" />
-                </g>
-                
-                {/* Expressway Labels */}
-                <text x="350" y="295" fill="#475569" fontSize="7" fontWeight="black" textAnchor="middle" transform="rotate(-23, 350, 295)">AUTOPISTA ILLIA / LUGONES</text>
-                <text x="580" y="210" fill="#475569" fontSize="7" fontWeight="black" textAnchor="middle" transform="rotate(-23, 580, 210)">ACCESO NORTE / PANAMERICANA</text>
-
-                {/* D. THE LIVE DELIVERY ROUTE (Glow and Light Streams) */}
-                {/* 1. Underlying Blue Route Neon Glow */}
-                <path 
-                  d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
-                  fill="none" 
-                  stroke="#3b82f6" 
-                  strokeWidth="8" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  opacity="0.3"
-                  className="blur-xs"
-                />
-                
-                {/* 2. Dotted Route Path Ahead */}
-                <path 
-                  d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
-                  fill="none" 
-                  stroke="#1e3a8a" 
-                  strokeWidth="4" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                />
-                <path 
-                  d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
-                  fill="none" 
-                  stroke="#3b82f6" 
-                  strokeWidth="3.5" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeDasharray="8 6"
-                />
-
-                {/* 3. Completed Route Neon Green Flowing Tracker */}
-                <path 
-                  d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
-                  fill="none" 
-                  stroke="#10b981" 
-                  strokeWidth="4" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  className="animated-flow-line"
-                  style={{
-                    strokeDasharray: 2000,
-                    strokeDashoffset: 2000 - (2000 * progress) / 100
-                  }}
-                />
-
-                {/* E. MAP COMPASS ROSE & SCALE INDICATOR */}
-                {/* Compass Rose */}
-                <g transform="translate(740, 65)" opacity="0.85" filter="url(#shadowGlow)">
-                  <circle cx="0" cy="0" r="22" fill="#1e293b" stroke="#334155" strokeWidth="1.5" />
-                  <circle cx="0" cy="0" r="18" fill="none" stroke="#475569" strokeWidth="0.75" strokeDasharray="2 2" />
-                  
-                  {/* Compass directions pointers */}
-                  <line x1="0" y1="-16" x2="0" y2="16" stroke="#475569" strokeWidth="1" />
-                  <line x1="-16" y1="0" x2="16" y2="0" stroke="#475569" strokeWidth="1" />
-                  
-                  <polygon points="0,-18 -4,-5 4,-5" fill="#f97316" />
-                  <polygon points="0,18 -4,5 4,5" fill="#64748b" />
-                  <polygon points="-18,0 -5,-4 -5,4" fill="#64748b" />
-                  <polygon points="18,0 5,-4 5,4" fill="#64748b" />
-                  
-                  <text x="0" y="-23" fill="#cbd5e1" fontSize="8" fontWeight="black" textAnchor="middle">N</text>
-                  <text x="23" y="2.5" fill="#cbd5e1" fontSize="7" fontWeight="bold">E</text>
-                </g>
-
-                {/* Scale Rule indicator */}
-                <g transform="translate(40, 470)" opacity="0.85" filter="url(#shadowGlow)">
-                  <rect x="-5" y="-18" width="90" height="23" rx="4" fill="#0f172a/90" stroke="#1e293b" strokeWidth="0.5" />
-                  <line x1="0" y1="0" x2="80" y2="0" stroke="#94a3b8" strokeWidth="2" />
-                  <line x1="0" y1="-4" x2="0" y2="4" stroke="#94a3b8" strokeWidth="2" />
-                  <line x1="40" y1="-4" x2="40" y2="4" stroke="#94a3b8" strokeWidth="2" />
-                  <line x1="80" y1="-4" x2="80" y2="4" stroke="#94a3b8" strokeWidth="2" />
-                  <text x="40" y="-8" fill="#94a3b8" fontSize="8" fontWeight="bold" fontFamily="monospace" textAnchor="middle">ESCALA 1:50.000 (1 km)</text>
-                </g>
-
-                {/* F. CHECKPOINT NODE MARKERS (Teardrop pins with custom logos & badges) */}
-                {routePoints.map((point, index) => {
-                  const isCompleted = progress >= (index / (routePoints.length - 1)) * 100;
-                  const isActive = activePhaseIndex === index && progress < 100;
-
-                  // High-fidelity emoji icons for nodes to represent authentic stages
-                  const landmarkEmojis = ["🏢", "📦", "🛣️", "🏪", "🏠"];
-                  const pinColor = isCompleted 
-                    ? (index === 4 ? "#10b981" : "#059669") 
-                    : "#334155";
-                  const pinBorder = isActive 
-                    ? "#3b82f6" 
-                    : (isCompleted ? "#34d399" : "#475569");
-
-                  return (
-                    <g 
-                      key={index} 
-                      className="cursor-pointer group/node"
-                      onClick={() => setSelectedCheckpoint(index)}
-                      filter="url(#shadowGlow)"
+            {/* Central Map Selector & Tracking State */}
+            {useGoogleMaps ? (
+              hasValidKey ? (
+                <APIProvider apiKey={API_KEY} version="weekly">
+                  <div className="w-full h-full relative">
+                    <Map
+                      defaultCenter={currentLatLng}
+                      defaultZoom={13}
+                      mapId="DEMO_MAP_ID"
+                      internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
+                      style={{ width: '100%', height: '100%' }}
+                      gestureHandling="cooperative"
+                      styles={theme === 'dark' ? mapDarkStyles : mapLightStyles}
+                      disableDefaultUI={true}
                     >
-                      {/* Active Node Ripple Ring */}
-                      {(isActive || (index === 4 && progress >= 100)) && (
-                        <circle 
-                          cx={point.x} 
-                          cy={point.y} 
-                          r="25" 
-                          fill="none" 
-                          stroke={index === 4 ? "#10b981" : "#3b82f6"} 
-                          strokeWidth="2" 
-                          className="pulsing-halo-map" 
+                      {/* Map Camera Controller */}
+                      <MapController 
+                        center={currentLatLng} 
+                        followDriver={followDriver} 
+                        onMapDrag={() => setFollowDriver(false)} 
+                      />
+
+                      {/* Route Polyline Ahead */}
+                      <MapPolyline 
+                        path={geoCheckpoints.map(c => ({ lat: c.lat, lng: c.lng }))} 
+                        options={{ 
+                          strokeColor: theme === 'dark' ? '#3b82f6' : '#2563eb', 
+                          strokeOpacity: 0.4, 
+                          strokeWeight: 4 
+                        }} 
+                      />
+
+                      {/* Completed Route Polyline */}
+                      <MapPolyline 
+                        path={useMemo(() => {
+                          const path: google.maps.LatLngLiteral[] = [];
+                          const pointCount = geoCheckpoints.length;
+                          const segmentWidth = 100 / (pointCount - 1);
+                          const currentIndex = Math.min(pointCount - 2, Math.floor(progress / segmentWidth));
+                          for (let i = 0; i <= currentIndex; i++) {
+                            path.push({ lat: geoCheckpoints[i].lat, lng: geoCheckpoints[i].lng });
+                          }
+                          path.push({ lat: currentLatLng.lat, lng: currentLatLng.lng });
+                          return path;
+                        }, [geoCheckpoints, progress, currentLatLng])} 
+                        options={{ 
+                          strokeColor: '#10b981', 
+                          strokeOpacity: 0.9, 
+                          strokeWeight: 5 
+                        }} 
+                      />
+
+                      {/* Checkpoint Pins */}
+                      {geoCheckpoints.map((c, index) => {
+                        const isCompleted = progress >= (index / (geoCheckpoints.length - 1)) * 100;
+                        const isActive = activePhaseIndex === index && progress < 100;
+                        return (
+                          <AdvancedMarker 
+                            key={index} 
+                            position={{ lat: c.lat, lng: c.lng }}
+                            onClick={() => setSelectedCheckpoint(index)}
+                          >
+                            <div style={{ width: '40px', height: '40px' }} className="relative flex items-center justify-center cursor-pointer group">
+                              {isActive && (
+                                <div className="absolute inset-0 bg-blue-500/25 rounded-full animate-ping" />
+                              )}
+                              <div className={cn(
+                                "w-9 h-9 rounded-full shadow-lg border-2 flex items-center justify-center text-sm transition-transform duration-300 group-hover:scale-115",
+                                isCompleted
+                                  ? "bg-emerald-500 border-emerald-300 text-white shadow-emerald-950/20"
+                                  : "bg-slate-800 border-slate-600 text-slate-300"
+                              )}>
+                                {c.emoji}
+                              </div>
+                              <div className="absolute -top-8 bg-slate-950 border border-slate-800 text-[9px] font-black px-2 py-1 rounded shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-white z-50">
+                                {c.label}
+                              </div>
+                            </div>
+                          </AdvancedMarker>
+                        );
+                      })}
+
+                      {/* Delivery Truck Rider Pin */}
+                      {progress < 100 && (
+                        <AdvancedMarker position={currentLatLng}>
+                          <div style={{ width: '48px', height: '48px' }} className="relative flex items-center justify-center">
+                            <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-pulse" style={{ transform: 'scale(1.2)' }} />
+                            <div 
+                              className="w-10 h-10 bg-blue-600 border-2 border-white rounded-full flex items-center justify-center shadow-2xl text-white transition-transform"
+                              style={{ transform: `rotate(${currentLatLng.heading}deg)` }}
+                            >
+                              <Truck className="w-5 h-5" style={{ transform: `rotate(${-currentLatLng.heading}deg)` }} />
+                            </div>
+                          </div>
+                        </AdvancedMarker>
+                      )}
+                    </Map>
+
+                    {/* Floating HUD over map */}
+                    <div className="absolute bottom-18 right-4 z-10 flex flex-col gap-2">
+                      {!followDriver && (
+                        <button
+                          onClick={() => setFollowDriver(true)}
+                          className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow-xl transition-all border border-blue-400"
+                        >
+                          <Navigation className="w-3.5 h-3.5 animate-pulse" />
+                          Centrar en Repartidor
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={() => setUseGoogleMaps(false)}
+                        className="bg-slate-900/90 backdrop-blur-sm border border-slate-800 text-slate-300 hover:text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow-xl transition-all"
+                      >
+                        <MapIcon className="w-3.5 h-3.5" />
+                        Ver Mapa Simulado (SVG)
+                      </button>
+                    </div>
+                  </div>
+                </APIProvider>
+              ) : (
+                /* Google Maps API Key Setup Guide Dashboard */
+                <div className="w-full h-full flex items-center justify-center bg-slate-950 p-6 text-slate-100">
+                  <div className="max-w-md w-full text-center space-y-6 bg-slate-900/80 backdrop-blur border border-slate-800 p-8 rounded-2xl shadow-2xl relative z-10 mt-16">
+                    <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                      <MapIcon className="w-7 h-7" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-black tracking-tight text-white">Google Maps en Tiempo Real</h3>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        Seguí tu envío de Nova3D sobre un mapa satelital e interactivo real de Buenos Aires con coordenadas en tiempo real.
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-950/60 rounded-xl p-4 text-left border border-slate-800/60 space-y-3 text-xs">
+                      <p className="font-bold text-slate-300 border-b border-slate-800 pb-2 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-orange-400" /> Instrucciones de activación:
+                      </p>
+                      <ol className="list-decimal list-inside space-y-2 text-slate-400 font-medium">
+                        <li>
+                          <a 
+                            href="https://console.cloud.google.com/google/maps-apis/start?utm_campaign=gmp-code-assist-ais" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:underline font-bold inline-flex items-center gap-1"
+                          >
+                            Obtené tu clave de API <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </li>
+                        <li>
+                          Abrí los <strong>Ajustes</strong> (ícono de engranaje ⚙️ arriba a la derecha)
+                        </li>
+                        <li>
+                          Elegí la pestaña <strong>Secrets</strong>
+                        </li>
+                        <li>
+                          Creá <code>GOOGLE_MAPS_PLATFORM_KEY</code> y pegá tu clave
+                        </li>
+                      </ol>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                      <button
+                        onClick={() => setUseGoogleMaps(false)}
+                        className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all border border-slate-700 cursor-pointer"
+                      >
+                        Ver Simulación (SVG)
+                      </button>
+                      <a
+                        href="https://console.cloud.google.com/google/maps-apis/start?utm_campaign=gmp-code-assist-ais"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg flex items-center justify-center gap-1.5"
+                      >
+                        Obtener Clave de API
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )
+            ) : (
+              /* Custom High-Fidelity SVG Map Fallback */
+              <div className="w-full h-full relative">
+                <svg 
+                  viewBox="0 0 800 500" 
+                  className="w-full h-full bg-[#0b1329] transition-all duration-300"
+                  style={{ 
+                    backgroundImage: 'radial-gradient(rgba(51, 65, 85, 0.25) 1px, transparent 1px)', 
+                    backgroundSize: '20px 20px' 
+                  }}
+                >
+                  <style>{`
+                    @keyframes flow-dash {
+                      to {
+                        stroke-dashoffset: -40;
+                      }
+                    }
+                    .animated-flow-line {
+                      stroke-dasharray: 10 8;
+                      animation: flow-dash 1.5s linear infinite;
+                    }
+                    @keyframes pulse-ring-glow {
+                      0% { transform: scale(0.9) opacity: 0.9; }
+                      50% { transform: scale(1.15) opacity: 0.4; }
+                      100% { transform: scale(1.4) opacity: 0; }
+                    }
+                    .pulsing-halo-map {
+                      animation: pulse-ring-glow 2.5s ease-out infinite;
+                    }
+                  `}</style>
+
+                  <defs>
+                    <linearGradient id="riverGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#1a2e5a" stopOpacity="0.85" />
+                      <stop offset="100%" stopColor="#0f1e40" stopOpacity="0.95" />
+                    </linearGradient>
+                    
+                    <linearGradient id="parkGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#047857" stopOpacity="0.18" />
+                      <stop offset="100%" stopColor="#065f46" stopOpacity="0.10" />
+                    </linearGradient>
+
+                    <radialGradient id="vehicleRadar" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                    </radialGradient>
+                    
+                    <filter id="shadowGlow" x="-10%" y="-10%" width="120%" height="120%">
+                      <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.5" />
+                    </filter>
+                  </defs>
+
+                  {/* A. GEOGRAPHIC BACKGROUND LAYERS */}
+                  <path 
+                    d="M 320,0 C 440,70 580,120 800,160 L 800,0 Z" 
+                    fill="url(#riverGrad)" 
+                    stroke="#1d4ed8" 
+                    strokeWidth="1.5"
+                    opacity="0.85" 
+                  />
+                  
+                  <path d="M 450,25 Q 490,40 530,25" fill="none" stroke="#2563eb" strokeWidth="1" opacity="0.3" />
+                  <path d="M 600,50 Q 640,65 680,50" fill="none" stroke="#2563eb" strokeWidth="1" opacity="0.3" />
+                  
+                  <text x="640" y="45" fill="#3b82f6" fontSize="9" fontWeight="black" letterSpacing="1.5" opacity="0.4" transform="rotate(11, 640, 45)">RÍO DE LA PLATA</text>
+
+                  <path 
+                    d="M 60,350 C 90,320 180,310 200,340 C 210,380 160,420 120,410 C 80,400 50,380 60,350 Z" 
+                    fill="url(#parkGrad)" 
+                    stroke="#10b981" 
+                    strokeWidth="1" 
+                    strokeDasharray="4 2"
+                    opacity="0.6" 
+                  />
+                  <text x="125" y="365" fill="#10b981" fontSize="8" fontWeight="bold" letterSpacing="0.5" opacity="0.5">Bosques de Palermo</text>
+
+                  {/* B. SECONDARY STREET GRID */}
+                  <g stroke="#1e293b" strokeWidth="1" opacity="0.5">
+                    <line x1="0" y1="180" x2="800" y2="180" />
+                    <line x1="0" y1="220" x2="800" y2="220" />
+                    <line x1="0" y1="280" x2="800" y2="280" />
+                    <line x1="0" y1="340" x2="800" y2="340" />
+                    
+                    <line x1="100" y1="0" x2="100" y2="500" />
+                    <line x1="200" y1="0" x2="200" y2="500" />
+                    <line x1="320" y1="0" x2="320" y2="500" />
+                    <line x1="440" y1="0" x2="440" y2="500" />
+                  </g>
+
+                  {/* C. MAIN EXPRESSWAYS */}
+                  <g stroke="#1e293b" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" opacity="0.8">
+                    <path d="M 120 400 L 720 120" fill="none" />
+                    <path d="M 50 450 Q 250 350 450 250 T 750 150" fill="none" />
+                  </g>
+                  <g stroke="#334155" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" opacity="0.9">
+                    <path d="M 120 400 L 720 120" fill="none" />
+                    <path d="M 50 450 Q 250 350 450 250 T 750 150" fill="none" />
+                  </g>
+
+                  {/* D. THE LIVE DELIVERY ROUTE */}
+                  <path 
+                    d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
+                    fill="none" 
+                    stroke="#3b82f6" 
+                    strokeWidth="8" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    opacity="0.3"
+                  />
+                  <path 
+                    d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
+                    fill="none" 
+                    stroke="#1e3a8a" 
+                    strokeWidth="4" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                  />
+                  
+                  {/* Completed Route Neon Green Tracker */}
+                  <path 
+                    d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
+                    fill="none" 
+                    stroke="#10b981" 
+                    strokeWidth="4" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className="animated-flow-line"
+                    style={{
+                      strokeDasharray: 2000,
+                      strokeDashoffset: 2000 - (2000 * progress) / 100
+                    }}
+                  />
+
+                  {/* Checkpoints */}
+                  {routePoints.map((point, index) => {
+                    const isCompleted = progress >= (index / (routePoints.length - 1)) * 100;
+                    const isActive = activePhaseIndex === index && progress < 100;
+                    const landmarkEmojis = ["🏢", "📦", "🛣️", "🏪", "🏠"];
+                    const pinColor = isCompleted ? (index === 4 ? "#10b981" : "#059669") : "#334155";
+                    const pinBorder = isActive ? "#3b82f6" : (isCompleted ? "#34d399" : "#475569");
+
+                    return (
+                      <g 
+                        key={index} 
+                        className="cursor-pointer group/node" 
+                        onClick={() => setSelectedCheckpoint(index)}
+                        filter="url(#shadowGlow)"
+                      >
+                        {isActive && (
+                          <circle cx={point.x} cy={point.y} r="25" fill="none" stroke="#3b82f6" strokeWidth="2" className="pulsing-halo-map" style={{ transformOrigin: `${point.x}px ${point.y}px` }} />
+                        )}
+                        <path
+                          d={`M ${point.x} ${point.y + 12} C ${point.x - 14} ${point.y - 2} ${point.x - 12} ${point.y - 18} ${point.x} ${point.y - 18} C ${point.x + 12} ${point.y - 18} ${point.x + 14} ${point.y - 2} ${point.x} ${point.y + 12} Z`}
+                          fill={pinColor}
+                          stroke={pinBorder}
+                          strokeWidth="1.5"
                           style={{ transformOrigin: `${point.x}px ${point.y}px` }}
                         />
-                      )}
+                        <circle cx={point.x} cy={point.y - 4} r="9" fill="#0f172a" />
+                        <text x={point.x} y={point.y + 0.5} fontSize="10" textAnchor="middle" className="pointer-events-none select-none">{landmarkEmojis[index]}</text>
+                      </g>
+                    );
+                  })}
 
-                      {/* Click Halo */}
-                      <circle 
-                        cx={point.x} 
-                        cy={point.y} 
-                        r="28" 
-                        fill="transparent" 
-                        className="hover:fill-white/5 transition-colors"
-                      />
-
-                      {/* Outer Pin Body */}
-                      <path
-                        d={`M ${point.x} ${point.y + 12} 
-                           C ${point.x - 14} ${point.y - 2} ${point.x - 12} ${point.y - 18} ${point.x} ${point.y - 18} 
-                           C ${point.x + 12} ${point.y - 18} ${point.x + 14} ${point.y - 2} ${point.x} ${point.y + 12} Z`}
-                        fill={pinColor}
-                        stroke={pinBorder}
-                        strokeWidth={isActive ? "2.5" : "1.5"}
-                        className="transition-all duration-300 group-hover/node:scale-115"
-                        style={{ transformOrigin: `${point.x}px ${point.y}px` }}
-                      />
-
-                      {/* Little Inner circle */}
-                      <circle 
-                        cx={point.x} 
-                        cy={point.y - 4} 
-                        r="9" 
-                        fill="#0f172a" 
-                      />
-
-                      {/* Emoji Icon representer inside Pin */}
-                      <text 
-                        x={point.x} 
-                        y={point.y + 0.5} 
-                        fontSize="10" 
-                        textAnchor="middle"
-                        className="pointer-events-none select-none"
-                      >
-                        {landmarkEmojis[index]}
-                      </text>
-
-                      {/* High-visibility node label label plate on map */}
-                      <g transform={`translate(${point.x}, ${point.y - 26})`}>
-                        <rect 
-                          x="-65" 
-                          y="-9" 
-                          width="130" 
-                          height="16" 
-                          rx="4" 
-                          fill="#0f172a" 
-                          stroke={isActive ? "#3b82f6" : "#1e293b"} 
-                          strokeWidth="1.5"
-                          opacity="0.95"
-                        />
-                        <text 
-                          x="0" 
-                          y="2" 
-                          fill={isActive ? "#3b82f6" : "#f8fafc"} 
-                          fontSize="8" 
-                          fontWeight="black" 
-                          textAnchor="middle"
-                        >
-                          {point.label}
-                        </text>
+                  {/* Moving Vehicle */}
+                  {progress < 100 && (
+                    <g style={{ transform: `translate(${vehiclePos.x}px, ${vehiclePos.y}px) rotate(${vehiclePos.angle}deg)`, transition: 'transform 0.12s linear', transformOrigin: '0px 0px' }} filter="url(#shadowGlow)">
+                      <circle cx="0" cy="0" r="28" fill="url(#vehicleRadar)" className="animate-pulse" />
+                      <circle cx="0" cy="0" r="14" fill="#1e293b" stroke="#3b82f6" strokeWidth="2.5" />
+                      <g transform="translate(-10, -9) scale(0.95)">
+                        <rect x="1" y="2" width="12" height="11" rx="2" fill="#3b82f6" stroke="#ffffff" strokeWidth="1" />
+                        <path d="M 13 4 L 17 4 L 20 8 L 20 13 L 13 13 Z" fill="#38bdf8" stroke="#ffffff" strokeWidth="1" />
+                        <polygon points="14,6 16,6 18,9 14,9" fill="#0f172a" />
+                        <circle cx="4" cy="14" r="2.2" fill="#020617" stroke="#ffffff" strokeWidth="0.75" />
+                        <circle cx="15" cy="14" r="2.2" fill="#020617" stroke="#ffffff" strokeWidth="0.75" />
                       </g>
                     </g>
-                  );
-                })}
+                  )}
+                </svg>
 
-                {/* G. THE MOVING VEHICLE (Smooth vector path translation & heading rotation) */}
-                {progress < 100 && (
-                  <g 
-                    style={{ 
-                      transform: `translate(${vehiclePos.x}px, ${vehiclePos.y}px) rotate(${vehiclePos.angle}deg)`,
-                      transition: 'transform 0.12s linear',
-                      transformOrigin: '0px 0px'
-                    }}
-                    filter="url(#shadowGlow)"
+                {/* Switch to Google Maps button floating */}
+                <div className="absolute bottom-18 right-4 z-10">
+                  <button
+                    onClick={() => setUseGoogleMaps(true)}
+                    className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-xl transition-all border border-blue-400 cursor-pointer animate-bounce"
                   >
-                    {/* Glowing radar dome underneath vehicle */}
-                    <circle cx="0" cy="0" r="28" fill="url(#vehicleRadar)" className="animate-pulse" />
-                    
-                    {/* Glowing footprint ring */}
-                    <circle cx="0" cy="0" r="14" fill="#1e293b" stroke="#3b82f6" strokeWidth="2.5" />
-                    
-                    {/* Little headlight directional beam cone */}
-                    <path d="M 12 -6 L 36 -12 Q 44 0 36 12 L 12 6 Z" fill="#3b82f6" opacity="0.22" />
-
-                    {/* Highly polished vehicle body */}
-                    <g transform="translate(-10, -9) scale(0.95)">
-                      {/* Truck container */}
-                      <rect x="1" y="2" width="12" height="11" rx="2" fill="#3b82f6" stroke="#ffffff" strokeWidth="1" />
-                      {/* Driver Cabin */}
-                      <path d="M 13 4 L 17 4 L 20 8 L 20 13 L 13 13 Z" fill="#38bdf8" stroke="#ffffff" strokeWidth="1" />
-                      {/* Cabin Window */}
-                      <polygon points="14,6 16,6 18,9 14,9" fill="#0f172a" />
-                      {/* Front and back wheels */}
-                      <circle cx="4" cy="14" r="2.2" fill="#020617" stroke="#ffffff" strokeWidth="0.75" />
-                      <circle cx="15" cy="14" r="2.2" fill="#020617" stroke="#ffffff" strokeWidth="0.75" />
-                    </g>
-                  </g>
-                )}
-              </svg>
+                    <MapIcon className="w-4 h-4" />
+                    Activar Google Maps
+                  </button>
+                </div>
+              </div>
+            )}
 
 
               {/* Map Footer Control Panel (Uber / Player controls) */}
@@ -707,7 +905,6 @@ export function ProductTrackingView({
                 </div>
               </div>
             </div>
-          </div>
 
           {/* Dynamic Checkpoint Detail Block */}
           {selectedCheckpoint !== null && (
