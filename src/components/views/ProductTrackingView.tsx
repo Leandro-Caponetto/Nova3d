@@ -9,6 +9,276 @@ import {
 import { cn } from '../../lib/utils';
 import { Product } from '../../types';
 import { APIProvider, Map, AdvancedMarker, Pin, useMap } from '@vis.gl/react-google-maps';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for default Leaflet icon paths in Vite builds (using Custom CSS & DivIcons instead)
+// This ensures we never get a 404 on marker shadow or marker-icon PNGs.
+const leafletCustomStyles = `
+  .leaflet-container {
+    background: #0f172a !important;
+  }
+  .leaflet-bar {
+    border: 1px solid #334155 !important;
+    background-color: #0f172a !important;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+  }
+  .leaflet-bar a {
+    background-color: #0f172a !important;
+    color: #94a3b8 !important;
+    border-bottom: 1px solid #334155 !important;
+    transition: all 0.2s;
+  }
+  .leaflet-bar a:hover {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+  }
+  .custom-checkpoint-marker, .custom-truck-marker {
+    background: transparent !important;
+    border: none !important;
+  }
+`;
+
+// Insert custom style element for Leaflet theme integration
+if (typeof document !== 'undefined') {
+  const styleEl = document.createElement('style');
+  styleEl.innerHTML = leafletCustomStyles;
+  document.head.appendChild(styleEl);
+}
+
+interface LeafletMapProps {
+  center: { lat: number; lng: number; heading: number };
+  progress: number;
+  geoCheckpoints: Array<{ lat: number; lng: number; label: string; sub: string; emoji: string }>;
+  activePhaseIndex: number;
+  followDriver: boolean;
+  onMapDrag: () => void;
+  setSelectedCheckpoint: (index: number) => void;
+  theme: 'dark' | 'light';
+}
+
+function LeafletMapComponent({
+  center,
+  progress,
+  geoCheckpoints,
+  activePhaseIndex,
+  followDriver,
+  onMapDrag,
+  setSelectedCheckpoint,
+  theme
+}: LeafletMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const driverMarkerRef = useRef<L.Marker | null>(null);
+  const routePolylineRef = useRef<L.Polyline | null>(null);
+  const completedPolylineRef = useRef<L.Polyline | null>(null);
+  const checkpointMarkersRef = useRef<L.Marker[]>([]);
+
+  // Initialize Map
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Create map instance
+    const map = L.map(containerRef.current, {
+      center: [center.lat, center.lng],
+      zoom: 13,
+      zoomControl: true,
+      attributionControl: false,
+    });
+
+    mapRef.current = map;
+
+    // Premium CartoDB tiles that fit our dark/light slate design beautifully
+    const tileUrl = theme === 'dark'
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
+    L.tileLayer(tileUrl, {
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Event listeners
+    map.on('dragstart', onMapDrag);
+
+    // Create route polyline
+    const latLngs = geoCheckpoints.map(c => [c.lat, c.lng] as [number, number]);
+    const routePolyline = L.polyline(latLngs, {
+      color: theme === 'dark' ? '#3b82f6' : '#2563eb',
+      weight: 4,
+      opacity: 0.4,
+      dashArray: '5, 8'
+    }).addTo(map);
+    routePolylineRef.current = routePolyline;
+
+    // Create completed polyline
+    const completedPolyline = L.polyline([], {
+      color: '#10b981',
+      weight: 5,
+      opacity: 0.9
+    }).addTo(map);
+    completedPolylineRef.current = completedPolyline;
+
+    // Create checkpoint markers
+    checkpointMarkersRef.current = geoCheckpoints.map((checkpoint, index) => {
+      const isCompleted = progress >= (index / (geoCheckpoints.length - 1)) * 100;
+      const isActive = activePhaseIndex === index && progress < 100;
+
+      const html = `
+        <div class="relative flex items-center justify-center group" style="width: 40px; height: 40px;">
+          ${isActive ? '<div class="absolute inset-0 bg-blue-500/25 rounded-full animate-ping"></div>' : ''}
+          <div class="w-9 h-9 rounded-full shadow-lg border-2 flex items-center justify-center text-sm transition-transform duration-300 hover:scale-115 ${
+            isCompleted 
+              ? 'bg-emerald-500 border-emerald-300 text-white shadow-emerald-950/20' 
+              : 'bg-slate-800 border-slate-600 text-slate-300'
+          }">
+            ${checkpoint.emoji}
+          </div>
+        </div>
+      `;
+
+      const markerIcon = L.divIcon({
+        html,
+        className: 'custom-checkpoint-marker',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+      });
+
+      const marker = L.marker([checkpoint.lat, checkpoint.lng], { icon: markerIcon }).addTo(map);
+      marker.on('click', () => setSelectedCheckpoint(index));
+      return marker;
+    });
+
+    // Create driver/truck marker
+    if (progress < 100) {
+      const truckHtml = `
+        <div class="relative flex items-center justify-center" style="width: 48px; height: 48px;">
+          <div class="absolute inset-0 bg-blue-500/20 rounded-full animate-pulse" style="transform: scale(1.2);"></div>
+          <div class="w-10 h-10 bg-blue-600 border-2 border-white rounded-full flex items-center justify-center shadow-2xl text-white transform-truck-inner" style="transform: rotate(${center.heading}deg); transition: transform 0.1s linear; display: flex;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${-center.heading}deg); transition: transform 0.1s linear;"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><polyline points="14 10 20 10 22 14 22 18 14 18"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>
+          </div>
+        </div>
+      `;
+
+      const truckIcon = L.divIcon({
+        html: truckHtml,
+        className: 'custom-truck-marker',
+        iconSize: [48, 48],
+        iconAnchor: [24, 24]
+      });
+
+      driverMarkerRef.current = L.marker([center.lat, center.lng], { icon: truckIcon }).addTo(map);
+    }
+
+    // Cleanup map on unmount
+    return () => {
+      map.off('dragstart', onMapDrag);
+      checkpointMarkersRef.current.forEach(m => m.remove());
+      if (driverMarkerRef.current) driverMarkerRef.current.remove();
+      if (routePolylineRef.current) routePolylineRef.current.remove();
+      if (completedPolylineRef.current) completedPolylineRef.current.remove();
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [theme]);
+
+  // Update Driver Marker, Polylines and Map Pan
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // 1. Update Completed Polyline path
+    const completedPath: [number, number][] = [];
+    const pointCount = geoCheckpoints.length;
+    const segmentWidth = 100 / (pointCount - 1);
+    const currentIndex = Math.min(pointCount - 2, Math.floor(progress / segmentWidth));
+    
+    for (let i = 0; i <= currentIndex; i++) {
+      completedPath.push([geoCheckpoints[i].lat, geoCheckpoints[i].lng]);
+    }
+    completedPath.push([center.lat, center.lng]);
+
+    if (completedPolylineRef.current) {
+      completedPolylineRef.current.setLatLngs(completedPath);
+    }
+
+    // 2. Update Driver Marker position and heading
+    if (progress < 100) {
+      if (!driverMarkerRef.current) {
+        const truckHtml = `
+          <div class="relative flex items-center justify-center" style="width: 48px; height: 48px;">
+            <div class="absolute inset-0 bg-blue-500/20 rounded-full animate-pulse" style="transform: scale(1.2);"></div>
+            <div class="w-10 h-10 bg-blue-600 border-2 border-white rounded-full flex items-center justify-center shadow-2xl text-white transform-truck-inner" style="transform: rotate(${center.heading}deg); transition: transform 0.1s linear; display: flex;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${-center.heading}deg); transition: transform 0.1s linear;"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><polyline points="14 10 20 10 22 14 22 18 14 18"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>
+            </div>
+          </div>
+        `;
+        const truckIcon = L.divIcon({
+          html: truckHtml,
+          className: 'custom-truck-marker',
+          iconSize: [48, 48],
+          iconAnchor: [24, 24]
+        });
+        driverMarkerRef.current = L.marker([center.lat, center.lng], { icon: truckIcon }).addTo(map);
+      } else {
+        driverMarkerRef.current.setLatLng([center.lat, center.lng]);
+        
+        // Update rotation on the div directly to prevent stuttering
+        const element = driverMarkerRef.current.getElement();
+        if (element) {
+          const innerIcon = element.querySelector('.transform-truck-inner') as HTMLDivElement;
+          const svgIcon = element.querySelector('svg') as SVGElement;
+          if (innerIcon) {
+            innerIcon.style.transform = `rotate(${center.heading}deg)`;
+          }
+          if (svgIcon) {
+            svgIcon.style.transform = `rotate(${-center.heading}deg)`;
+          }
+        }
+      }
+    } else {
+      if (driverMarkerRef.current) {
+        driverMarkerRef.current.remove();
+        driverMarkerRef.current = null;
+      }
+    }
+
+    // 3. Update checkpoint markers completeness styles
+    checkpointMarkersRef.current.forEach((marker, index) => {
+      const isCompleted = progress >= (index / (geoCheckpoints.length - 1)) * 100;
+      const isActive = activePhaseIndex === index && progress < 100;
+      const checkpoint = geoCheckpoints[index];
+
+      const html = `
+        <div class="relative flex items-center justify-center group" style="width: 40px; height: 40px;">
+          ${isActive ? '<div class="absolute inset-0 bg-blue-500/25 rounded-full animate-ping"></div>' : ''}
+          <div class="w-9 h-9 rounded-full shadow-lg border-2 flex items-center justify-center text-sm transition-transform duration-300 hover:scale-115 ${
+            isCompleted 
+              ? 'bg-emerald-500 border-emerald-300 text-white shadow-emerald-950/20' 
+              : 'bg-slate-800 border-slate-600 text-slate-300'
+          }">
+            ${checkpoint.emoji}
+          </div>
+        </div>
+      `;
+
+      const markerIcon = L.divIcon({
+        html,
+        className: 'custom-checkpoint-marker',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+      });
+
+      marker.setIcon(markerIcon);
+    });
+
+    // 4. Smoothly Pan Map
+    if (followDriver) {
+      map.panTo([center.lat, center.lng]);
+    }
+  }, [center.lat, center.lng, center.heading, progress, followDriver, activePhaseIndex]);
+
+  return <div ref={containerRef} className="w-full h-full rounded-2xl" style={{ minHeight: '100%', zIndex: 1 }} />;
+}
 
 // Google Maps API Key Setup
 const API_KEY =
@@ -220,8 +490,10 @@ export function ProductTrackingView({
   const [simulationSpeed, setSimulationSpeed] = useState(1); // multiplier
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<number | null>(null);
 
-  // Google Maps state variables
-  const [useGoogleMaps, setUseGoogleMaps] = useState(hasValidKey);
+  // Map View Mode: 'real' (Leaflet OpenStreetMap), 'google' (Google Maps - requires key), 'svg' (Stylized Mock SVG)
+  const [mapViewMode, setMapViewMode] = useState<'real' | 'google' | 'svg'>(
+    hasValidKey ? 'google' : 'real'
+  );
   const [followDriver, setFollowDriver] = useState(true);
 
   // Real geographic coordinates for Google Maps (Buenos Aires, Argentina)
@@ -474,7 +746,7 @@ export function ProductTrackingView({
             </div>
 
             {/* Central Map Selector & Tracking State */}
-            {useGoogleMaps ? (
+            {mapViewMode === 'google' ? (
               hasValidKey ? (
                 <APIProvider apiKey={API_KEY} version="weekly">
                   <div className="w-full h-full relative">
@@ -583,77 +855,107 @@ export function ProductTrackingView({
                         </button>
                       )}
                       
-                      <button
-                        onClick={() => setUseGoogleMaps(false)}
-                        className="bg-slate-900/90 backdrop-blur-sm border border-slate-800 text-slate-300 hover:text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow-xl transition-all"
-                      >
-                        <MapIcon className="w-3.5 h-3.5" />
-                        Ver Mapa Simulado (SVG)
-                      </button>
+                      <div className="flex gap-2 bg-slate-900/95 backdrop-blur-md border border-slate-800 p-1.5 rounded-xl shadow-2xl">
+                        <button
+                          onClick={() => setMapViewMode('real')}
+                          className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all"
+                        >
+                          Mapa Real Gratis
+                        </button>
+                        <button
+                          onClick={() => setMapViewMode('svg')}
+                          className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all"
+                        >
+                          Ilustración (SVG)
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </APIProvider>
               ) : (
                 /* Google Maps API Key Setup Guide Dashboard */
                 <div className="w-full h-full flex items-center justify-center bg-slate-950 p-6 text-slate-100">
-                  <div className="max-w-md w-full text-center space-y-6 bg-slate-900/80 backdrop-blur border border-slate-800 p-8 rounded-2xl shadow-2xl relative z-10 mt-16">
-                    <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-                      <MapIcon className="w-7 h-7" />
+                  <div className="max-w-md w-full text-center space-y-4 bg-slate-900/90 backdrop-blur border border-slate-800 p-8 rounded-2xl shadow-2xl relative z-10 mt-12">
+                    <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                      <MapIcon className="w-6 h-6" />
                     </div>
                     
-                    <div className="space-y-2">
-                      <h3 className="text-lg font-black tracking-tight text-white">Google Maps en Tiempo Real</h3>
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        Seguí tu envío de Nova3D sobre un mapa satelital e interactivo real de Buenos Aires con coordenadas en tiempo real.
+                    <div className="space-y-1">
+                      <h3 className="text-base font-black tracking-tight text-white">Google Maps en Tiempo Real</h3>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        Seguí tu envío sobre el mapa oficial satelital. Requiere una API Key con facturación activada en Google Cloud.
                       </p>
                     </div>
 
-                    <div className="bg-slate-950/60 rounded-xl p-4 text-left border border-slate-800/60 space-y-3 text-xs">
-                      <p className="font-bold text-slate-300 border-b border-slate-800 pb-2 flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-orange-400" /> Instrucciones de activación:
+                    <div className="bg-slate-950/60 rounded-xl p-3 text-left border border-slate-800/60 space-y-2 text-[11px]">
+                      <p className="font-bold text-slate-300 border-b border-slate-800 pb-1.5 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-orange-400" /> ¿No querés poner tarjeta?
                       </p>
-                      <ol className="list-decimal list-inside space-y-2 text-slate-400 font-medium">
-                        <li>
-                          <a 
-                            href="https://console.cloud.google.com/google/maps-apis/start?utm_campaign=gmp-code-assist-ais" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-blue-400 hover:underline font-bold inline-flex items-center gap-1"
-                          >
-                            Obtené tu clave de API <ExternalLink className="w-3 h-3" />
-                          </a>
-                        </li>
-                        <li>
-                          Abrí los <strong>Ajustes</strong> (ícono de engranaje ⚙️ arriba a la derecha)
-                        </li>
-                        <li>
-                          Elegí la pestaña <strong>Secrets</strong>
-                        </li>
-                        <li>
-                          Creá <code>GOOGLE_MAPS_PLATFORM_KEY</code> y pegá tu clave
-                        </li>
-                      </ol>
+                      <p className="text-slate-400">
+                        ¡No te preocupes! El <strong>Mapa Real Gratis</strong> ya está activo por defecto. Utiliza OpenStreetMap y no requiere ninguna API key ni tarjetas.
+                      </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
                       <button
-                        onClick={() => setUseGoogleMaps(false)}
-                        className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all border border-slate-700 cursor-pointer"
+                        onClick={() => setMapViewMode('real')}
+                        className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer"
                       >
-                        Ver Simulación (SVG)
+                        Usar Mapa Real Gratis
                       </button>
-                      <a
-                        href="https://console.cloud.google.com/google/maps-apis/start?utm_campaign=gmp-code-assist-ais"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg flex items-center justify-center gap-1.5"
+                      <button
+                        onClick={() => setMapViewMode('svg')}
+                        className="flex-1 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition-all border border-slate-700 cursor-pointer"
                       >
-                        Obtener Clave de API
-                      </a>
+                        Ver Ilustración (SVG)
+                      </button>
                     </div>
                   </div>
                 </div>
               )
+            ) : mapViewMode === 'real' ? (
+              /* Beautiful Real Street Map via Leaflet/OpenStreetMap (API-Key and Credit-Card free) */
+              <div className="w-full h-full relative">
+                <LeafletMapComponent
+                  center={currentLatLng}
+                  progress={progress}
+                  geoCheckpoints={geoCheckpoints}
+                  activePhaseIndex={activePhaseIndex}
+                  followDriver={followDriver}
+                  onMapDrag={() => setFollowDriver(false)}
+                  setSelectedCheckpoint={setSelectedCheckpoint}
+                  theme={theme}
+                />
+                
+                {/* Float controls on Leaflet */}
+                <div className="absolute bottom-18 right-4 z-10 flex flex-col gap-2">
+                  {!followDriver && (
+                    <button
+                      onClick={() => setFollowDriver(true)}
+                      className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-xl transition-all border border-blue-400"
+                    >
+                      <Navigation className="w-3 h-3 animate-pulse" />
+                      Centrar en Repartidor
+                    </button>
+                  )}
+                  
+                  <div className="flex gap-2 bg-slate-900/95 backdrop-blur-md border border-slate-800 p-1 rounded-lg shadow-2xl">
+                    <button
+                      onClick={() => setMapViewMode('svg')}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[9px] font-bold px-2 py-1 rounded transition-all"
+                    >
+                      Ver Ilustración
+                    </button>
+                    <button
+                      onClick={() => setMapViewMode('google')}
+                      className="bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-bold px-2 py-1 rounded transition-all flex items-center gap-1"
+                    >
+                      <MapIcon className="w-3 h-3" />
+                      Google Maps
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : (
               /* Custom High-Fidelity SVG Map Fallback */
               <div className="w-full h-full relative">
@@ -834,15 +1136,22 @@ export function ProductTrackingView({
                   )}
                 </svg>
 
-                {/* Switch to Google Maps button floating */}
+                {/* Floating controls on SVG */}
                 <div className="absolute bottom-18 right-4 z-10">
-                  <button
-                    onClick={() => setUseGoogleMaps(true)}
-                    className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-xl transition-all border border-blue-400 cursor-pointer animate-bounce"
-                  >
-                    <MapIcon className="w-4 h-4" />
-                    Activar Google Maps
-                  </button>
+                  <div className="flex gap-2 bg-slate-900/95 backdrop-blur-md border border-slate-800 p-1 rounded-lg shadow-2xl">
+                    <button
+                      onClick={() => setMapViewMode('real')}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-bold px-2 py-1 rounded transition-all shadow-md cursor-pointer"
+                    >
+                      Mapa Real Gratis
+                    </button>
+                    <button
+                      onClick={() => setMapViewMode('google')}
+                      className="bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-bold px-2 py-1 rounded transition-all"
+                    >
+                      Google Maps
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
