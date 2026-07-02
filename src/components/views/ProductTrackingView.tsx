@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   MapPin, Truck, Navigation, Shield, Check, Phone, MessageSquare, 
   Clock, Map as MapIcon, Play, Pause, RotateCcw, AlertCircle, 
-  Sparkles, Star, ChevronRight, ArrowLeft, RefreshCw, UserCheck
+  Sparkles, Star, ChevronRight, ArrowLeft, RefreshCw, UserCheck,
+  Mail, X, ExternalLink, FileText
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Product } from '../../types';
@@ -46,6 +47,10 @@ export function ProductTrackingView({
   const [progress, setProgress] = useState(35); // Initial progress starts halfway through transit
   const [simulationSpeed, setSimulationSpeed] = useState(1); // multiplier
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<number | null>(null);
+
+  // Email simulator states
+  const [showEmailSimulator, setShowEmailSimulator] = useState(false);
+  const [activeEmailTab, setActiveEmailTab] = useState<'preview' | 'setup'>('preview');
 
   // Driver states
   const driver = {
@@ -551,6 +556,44 @@ export function ProductTrackingView({
             </div>
           </div>
 
+          {/* Email Invoice Simulation & Verification Widget */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 dark:from-slate-800/80 dark:to-slate-900/60 border border-blue-100/80 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm space-y-3.5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-xl pointer-events-none" />
+            <div className="flex items-start gap-3">
+              <div className="bg-blue-600 text-white p-2.5 rounded-xl shrink-0 shadow-sm">
+                <Mail className="w-5 h-5 animate-bounce" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Verificación de Comprobante</span>
+                <h3 className="font-bold text-sm text-gray-900 dark:text-white mt-0.5">Factura de Compra Digital</h3>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  El sistema generó y procesó el comprobante electrónico para este pedido. Podés ver el mail simulado directamente en la app.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-1.5 flex flex-col gap-2">
+              <button 
+                onClick={() => {
+                  setShowEmailSimulator(true);
+                  setActiveEmailTab('preview');
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+              >
+                <FileText className="w-3.5 h-3.5 shrink-0" /> Abrir Comprobante / Mail (HTML)
+              </button>
+              <button 
+                onClick={() => {
+                  setShowEmailSimulator(true);
+                  setActiveEmailTab('setup');
+                }}
+                className="w-full bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/60 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-semibold text-xs py-2.5 rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                ¿Por qué no me llegó por mail real?
+              </button>
+            </div>
+          </div>
+
           {/* Delivery Phase Vertical Tracker */}
           <div className="bg-white dark:bg-slate-800 border border-gray-200/60 dark:border-slate-700/60 rounded-2xl p-6 shadow-sm">
             <h3 className="text-sm font-black text-gray-800 dark:text-white mb-6 uppercase tracking-wider">
@@ -690,6 +733,258 @@ export function ProductTrackingView({
           </div>
         </div>
       </div>
+
+      {/* Email Inbox Sandbox & Setup Guide Modal */}
+      <AnimatePresence>
+        {showEmailSimulator && (
+          <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-slate-900 border border-slate-800 text-white rounded-2xl shadow-2xl max-w-3xl w-full h-[85vh] flex flex-col overflow-hidden relative"
+            >
+              {/* Top Accent Bar */}
+              <div className="bg-blue-600 h-1.5 w-full shrink-0" />
+
+              {/* Header */}
+              <div className="p-4 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-950">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm tracking-tight">Simulador de Correo Electrónico</h3>
+                    <p className="text-[10px] text-slate-400">Inspeccioná la entrega digital y factura en tiempo real</p>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setShowEmailSimulator(false)}
+                  className="text-slate-400 hover:text-white p-1 hover:bg-slate-800 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Tabs Navigation */}
+              <div className="px-4 bg-slate-950 flex border-b border-slate-800 shrink-0">
+                <button 
+                  onClick={() => setActiveEmailTab('preview')}
+                  className={cn(
+                    "px-4 py-3 text-xs font-bold transition-all border-b-2",
+                    activeEmailTab === 'preview' 
+                      ? "border-blue-500 text-blue-400" 
+                      : "border-transparent text-slate-400 hover:text-white"
+                  )}
+                >
+                  📥 Recibidos (1) — Factura de Compra
+                </button>
+                <button 
+                  onClick={() => setActiveEmailTab('setup')}
+                  className={cn(
+                    "px-4 py-3 text-xs font-bold transition-all border-b-2",
+                    activeEmailTab === 'setup' 
+                      ? "border-blue-500 text-blue-400" 
+                      : "border-transparent text-slate-400 hover:text-white"
+                  )}
+                >
+                  ⚙️ ¿Cómo enviar emails reales? (Guía de Configuración)
+                </button>
+              </div>
+
+              {/* Modal Body / Scroll area */}
+              <div className="flex-grow overflow-y-auto p-5 bg-slate-900/40">
+                {activeEmailTab === 'preview' ? (
+                  <div className="space-y-4">
+                    {/* Simulated Email Envelope Header (Gmail Vibe) */}
+                    <div className="bg-slate-950 rounded-xl p-4 border border-slate-800/80 shadow-sm space-y-3 font-sans text-xs">
+                      <div className="flex items-center justify-between flex-wrap gap-2 text-slate-400 border-b border-slate-800/50 pb-2">
+                        <div>
+                          <p><span className="font-bold text-slate-300">De:</span> Nova3D <span className="text-slate-500">&lt;onboarding@resend.dev&gt;</span></p>
+                          <p className="mt-1"><span className="font-bold text-slate-300">Para:</span> caponettopeppers@gmail.com</p>
+                        </div>
+                        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md font-mono font-bold uppercase tracking-wider">
+                          Entregado (Simulación)
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-100 flex items-center gap-1.5">
+                          <span>🧾 Tu factura de compra Nova3D - Orden #{orderNumber.current}</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-1">Enviado: hoy, hace unos instantes • Vía Resend SMTP Sandbox</p>
+                      </div>
+                    </div>
+
+                    {/* Email Content Frame - High fidelity scrollable layout replicating Resend beautiful template */}
+                    <div className="bg-white text-[#1e293b] rounded-xl p-6 md:p-10 border border-slate-800 shadow-md font-sans overflow-x-auto">
+                      <div className="max-w-[600px] mx-auto bg-white">
+                        
+                        {/* Header Banner */}
+                        <div className="bg-[#0f172a] text-white p-8 rounded-t-xl text-center">
+                          <h1 className="margin-0 text-2xl font-extrabold tracking-tight uppercase" style={{ margin: 0 }}>
+                            NOVA<span className="text-orange-500">3D</span>
+                          </h1>
+                          <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-bold">Impresiones en 3D & Diseños a Medida</p>
+                          <div className="inline-block bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full mt-4 tracking-wider">
+                            Pago Aprobado
+                          </div>
+                        </div>
+
+                        {/* Invoice Body */}
+                        <div className="p-6 md:p-8 border-x border-b border-gray-100 rounded-b-xl space-y-6 text-sm">
+                          <div>
+                            <p className="text-base font-bold text-slate-800">¡Gracias por tu compra!</p>
+                            <p className="text-gray-500 mt-1 leading-relaxed">
+                              Procesamos tu pago de forma segura mediante Mercado Pago Argentina. Tu pedido ya ingresó a nuestra granja de impresión automatizada.
+                            </p>
+                          </div>
+
+                          {/* Details box */}
+                          <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-2">
+                            <div className="flex justify-between border-b border-gray-200/50 pb-2 text-xs">
+                              <span className="text-gray-400 font-bold uppercase">Concepto</span>
+                              <span className="text-gray-400 font-bold uppercase">Detalle</span>
+                            </div>
+                            <div className="flex justify-between pt-1 text-xs text-slate-700">
+                              <span>Número de Orden:</span>
+                              <span className="font-mono font-bold text-slate-900">{orderNumber.current}</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-slate-700">
+                              <span>Código de Seguimiento:</span>
+                              <span className="font-mono font-bold text-blue-600">{trackingCode.current}</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-slate-700">
+                              <span>Medio de Pago:</span>
+                              <span className="font-bold text-blue-600">Mercado Pago (Acreditado)</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-slate-700">
+                              <span>Destino:</span>
+                              <span className="font-semibold text-slate-900">{locationText}</span>
+                            </div>
+                          </div>
+
+                          {/* Items table */}
+                          <div className="border-b border-gray-100 pb-4">
+                            <table className="w-full text-left text-xs">
+                              <thead>
+                                <tr className="border-b border-gray-200 pb-2 text-gray-400 uppercase font-bold">
+                                  <th className="pb-2">Producto</th>
+                                  <th className="pb-2 text-center">Cant.</th>
+                                  <th className="pb-2 text-right">Monto</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr className="border-b border-gray-100">
+                                  <td className="py-3 flex items-center gap-3">
+                                    <img 
+                                      src={activeProduct.images[0]} 
+                                      className="w-10 h-10 object-contain bg-gray-50 rounded border border-gray-200" 
+                                      alt="Product Image"
+                                    />
+                                    <div>
+                                      <p className="font-bold text-slate-800">{activeProduct.name}</p>
+                                      <p className="text-[10px] text-gray-400">Filamento PLA+ Premium de alta calidad</p>
+                                    </div>
+                                  </td>
+                                  <td className="py-3 text-center font-bold text-slate-700">{quantity}</td>
+                                  <td className="py-3 text-right font-bold text-slate-800">$ {(activeProduct.price * quantity).toLocaleString('es-AR')}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Totals */}
+                          <div className="space-y-1.5 text-xs text-right max-w-xs ml-auto">
+                            <div className="flex justify-between text-gray-500">
+                              <span>Subtotal:</span>
+                              <span className="font-semibold text-slate-800">$ {(activeProduct.price * quantity).toLocaleString('es-AR')}</span>
+                            </div>
+                            <div className="flex justify-between text-gray-500">
+                              <span>Costo de Envío:</span>
+                              <span className="font-bold text-emerald-600">¡GRATIS!</span>
+                            </div>
+                            <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 text-slate-900">
+                              <span>Total Abonado:</span>
+                              <span className="text-blue-600 text-base font-black">$ {(activeProduct.price * quantity).toLocaleString('es-AR')}</span>
+                            </div>
+                          </div>
+
+                          {/* Footer details */}
+                          <div className="pt-4 border-t border-gray-100 text-center text-[11px] text-gray-400 space-y-1">
+                            <p>Este correo sirve como comprobante de pago oficial para tu transacción.</p>
+                            <p>¿Tenés alguna duda o querés personalizar tu modelo?</p>
+                            <p>Escribinos a <a href="mailto:caponettopeppers@gmail.com" className="text-orange-500 hover:underline">soporte@nova3d.com</a> o contactanos por nuestra línea directa.</p>
+                            <p className="pt-3 text-[10px] opacity-70">&copy; 2026 Nova3D Argentina. Todos los derechos reservados.</p>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6 font-sans">
+                    <div className="bg-amber-500/10 border border-amber-500/20 text-amber-200 rounded-xl p-4 flex gap-3 text-xs leading-relaxed">
+                      <AlertCircle className="w-5 h-5 shrink-0 text-amber-400" />
+                      <div>
+                        <p className="font-bold">¿Por qué no llegó a mi casilla de email?</p>
+                        <p className="mt-1 opacity-90">
+                          Para garantizar el envío en tiempo real a casillas de correo externas, el backend de la aplicación utiliza el servicio de entrega <span className="font-bold text-white">Resend</span>. Actualmente, no se ha configurado la clave de API necesaria en las variables de entorno, por lo que el sistema opera en <strong>Modo Sandbox Simulado</strong> de desarrollo.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-sm text-slate-200 border-b border-slate-800 pb-2 flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-blue-500/15 text-blue-400 text-xs flex items-center justify-center font-bold">1</span>
+                        Registrar una Cuenta Gratuita en Resend
+                      </h4>
+                      <p className="text-xs text-slate-400 leading-relaxed pl-7">
+                        Ingresá a <a href="https://resend.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline font-bold inline-flex items-center gap-1">resend.com <ExternalLink className="w-3 h-3" /></a> y registrate para obtener una cuenta gratis. Te brindará un límite de envío mensual generoso para pruebas.
+                      </p>
+
+                      <h4 className="font-bold text-sm text-slate-200 border-b border-slate-800 pb-2 flex items-center gap-2 pt-2">
+                        <span className="w-5 h-5 rounded-full bg-blue-500/15 text-blue-400 text-xs flex items-center justify-center font-bold">2</span>
+                        Crear una API Key
+                      </h4>
+                      <p className="text-xs text-slate-400 leading-relaxed pl-7">
+                        Dentro del panel de control de Resend, dirígete a la sección <strong>"API Keys"</strong>, haz clic en <strong>"Create API Key"</strong> y copia el código generado (comienza con <code className="bg-slate-950 px-1 py-0.5 rounded font-mono text-pink-400 text-[10px]">re_...</code>).
+                      </p>
+
+                      <h4 className="font-bold text-sm text-slate-200 border-b border-slate-800 pb-2 flex items-center gap-2 pt-2">
+                        <span className="w-5 h-5 rounded-full bg-blue-500/15 text-blue-400 text-xs flex items-center justify-center font-bold">3</span>
+                        Agregar la Variable de Entorno
+                      </h4>
+                      <p className="text-xs text-slate-400 leading-relaxed pl-7">
+                        Abre el menú de <strong>Secrets</strong> o <strong>Configuración de Variables de Entorno</strong> en el panel de AI Studio de este proyecto, agrega una nueva clave llamada <code className="bg-slate-950 px-1 py-0.5 rounded font-mono text-blue-400 text-[10px]">RESEND_API_KEY</code> y pega tu código como valor. ¡Reiniciá el servidor de desarrollo y listo!
+                      </p>
+
+                      <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2.5 text-xs">
+                        <h5 className="font-bold text-slate-300 flex items-center gap-1.5">
+                          <Check className="w-4 h-4 text-emerald-400" /> Nota sobre el "Sandbox de onboarding" de Resend:
+                        </h5>
+                        <p className="text-slate-400 text-[11px] leading-relaxed pl-5">
+                          Si utilizas el remitente por defecto de Resend (<code className="bg-slate-900 px-1 py-0.5 rounded font-mono text-slate-300">onboarding@resend.dev</code>) sin configurar un dominio propio verificado, Resend **solamente** tiene permitido entregar correos electrónicos a la <strong>misma dirección de email</strong> con la que te registraste en Resend. Si intentas enviar el mail a otra dirección ajena (como tu comprador de prueba), Resend rechazará la entrega de forma segura.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom bar */}
+              <div className="p-4 border-t border-slate-800 bg-slate-950 flex justify-end shrink-0">
+                <button 
+                  onClick={() => setShowEmailSimulator(false)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all cursor-pointer"
+                >
+                  Entendido / Cerrar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
