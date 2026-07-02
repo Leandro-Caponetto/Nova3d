@@ -72,30 +72,57 @@ export function ProductTrackingView({
     { x: 720, y: 110, label: "Tu Domicilio", sub: locationText, status: "pending", info: "Entrega coordinada y firma digital en destino." }
   ];
 
-  // Calculate current coordinates of vehicle on the path based on progress (0 - 100)
+  // Calculate current coordinates and heading angle of vehicle on the path based on progress (0 - 100)
   const getCoordinatesAtProgress = (pct: number) => {
     const pointCount = routePoints.length;
-    if (pointCount === 0) return { x: 0, y: 0 };
-    if (pct <= 0) return { x: routePoints[0].x, y: routePoints[0].y };
-    if (pct >= 100) return { x: routePoints[pointCount - 1].x, y: routePoints[pointCount - 1].y };
+    if (pointCount === 0) return { x: 0, y: 0, angle: 0 };
+    if (pct <= 0) {
+      const pA = routePoints[0];
+      const pB = routePoints[1];
+      const angle = Math.atan2(pB.y - pA.y, pB.x - pA.x) * (180 / Math.PI);
+      return { x: pA.x, y: pA.y, angle };
+    }
+    if (pct >= 100) {
+      const pA = routePoints[pointCount - 2];
+      const pB = routePoints[pointCount - 1];
+      const angle = Math.atan2(pB.y - pA.y, pB.x - pA.x) * (180 / Math.PI);
+      return { x: pB.x, y: pB.y, angle };
+    }
 
     // Find between which two points we are
     const segmentWidth = 100 / (pointCount - 1);
-    const index = Math.floor(pct / segmentWidth);
+    const index = Math.min(pointCount - 2, Math.floor(pct / segmentWidth));
     const segmentPct = (pct % segmentWidth) / segmentWidth;
 
     const pA = routePoints[index];
     const pB = routePoints[index + 1];
 
-    if (!pA || !pB) return { x: 0, y: 0 };
+    if (!pA || !pB) return { x: 0, y: 0, angle: 0 };
+
+    const dx = pB.x - pA.x;
+    const dy = pB.y - pA.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
     return {
-      x: pA.x + (pB.x - pA.x) * segmentPct,
-      y: pA.y + (pB.y - pA.y) * segmentPct
+      x: pA.x + dx * segmentPct,
+      y: pA.y + dy * segmentPct,
+      angle
     };
   };
 
   const vehiclePos = getCoordinatesAtProgress(progress);
+
+  // Live navigation current street/milestone HUD
+  const currentStreetName = useMemo(() => {
+    if (progress >= 100) return "Entregado - ¡Gracias por elegir Nova3D!";
+    if (progress >= 85) return "Llegando a destino - Ingresando a tu cuadra";
+    if (progress >= 75) return "Últimas cuadras - Transitando por Av. Maipú / San Isidro";
+    if (progress >= 55) return "En viaje - Transitando por Autopista Panamericana (Ruta 9)";
+    if (progress >= 35) return "Saliendo de CABA - Transitando por cruce de Av. General Paz";
+    if (progress >= 20) return "En viaje - Transitando por Autopista Cantilo / Av. Lugones";
+    if (progress >= 10) return "Despachado - Saliendo por Av. del Libertador (Palermo)";
+    return "Preparando orden en la granja de impresión 3D Nova3D";
+  }, [progress]);
 
   // Determine current active phase based on progress
   const activePhaseIndex = useMemo(() => {
@@ -234,55 +261,213 @@ export function ProductTrackingView({
               </div>
             </div>
 
+            {/* Map Header / Live Stats HUD */}
+            <div className="absolute top-4 left-4 right-4 z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl p-4 shadow-xl text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center border border-blue-500/30">
+                  <Truck className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest block">Navegación Activa en Tiempo Real</span>
+                  <span className="text-sm font-bold flex items-center gap-2 text-emerald-400">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                    {currentStreetName}
+                  </span>
+                </div>
+              </div>
+
+              {/* ETA / Distance Info blocks */}
+              <div className="flex items-center gap-6 divide-x divide-slate-800">
+                <div className="text-right">
+                  <span className="text-[9px] text-slate-400 uppercase font-bold block">Distancia Restante</span>
+                  <span className="text-lg font-black font-mono text-white">
+                    {progress >= 100 ? "0.0" : distanceRemaining} <span className="text-xs text-slate-400">km</span>
+                  </span>
+                </div>
+                <div className="pl-6 text-right">
+                  <span className="text-[9px] text-slate-400 uppercase font-bold block">Tiempo Estimado (ETA)</span>
+                  <span className="text-lg font-black font-mono text-orange-400 flex items-center gap-1">
+                    <Clock className="w-4 h-4 text-orange-400 inline" /> 
+                    {progress >= 100 ? "Llegó" : `~${etaMinutes} min`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Interactive Custom SVG Map */}
-            <div className="w-full aspect-video md:aspect-[16/9] min-h-[320px] relative">
+            <div className="w-full aspect-video md:aspect-[16/9] min-h-[340px] relative">
               <svg 
                 viewBox="0 0 800 500" 
-                className="w-full h-full bg-slate-950 transition-all duration-300"
-                style={{ backgroundImage: 'radial-gradient(#1e293b 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+                className="w-full h-full bg-[#0b1329] transition-all duration-300"
+                style={{ 
+                  backgroundImage: 'radial-gradient(rgba(51, 65, 85, 0.25) 1px, transparent 1px)', 
+                  backgroundSize: '20px 20px' 
+                }}
               >
-                {/* 1. Grid lines and decorative streets */}
-                <g stroke="#1e293b" strokeWidth="2" strokeDasharray="4 4" opacity="0.4">
+                {/* Embedded SVG styles for high-end animations */}
+                <style>{`
+                  @keyframes flow-dash {
+                    to {
+                      stroke-dashoffset: -40;
+                    }
+                  }
+                  .animated-flow-line {
+                    stroke-dasharray: 10 8;
+                    animation: flow-dash 1.5s linear infinite;
+                  }
+                  @keyframes pulse-ring-glow {
+                    0% { transform: scale(0.9) opacity: 0.9; }
+                    50% { transform: scale(1.15) opacity: 0.4; }
+                    100% { transform: scale(1.4) opacity: 0; }
+                  }
+                  .pulsing-halo-map {
+                    animation: pulse-ring-glow 2.5s ease-out infinite;
+                  }
+                `}</style>
+
+                <defs>
+                  {/* Gradients for Water, Parks and Route */}
+                  <linearGradient id="riverGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#1a2e5a" stopOpacity="0.85" />
+                    <stop offset="100%" stopColor="#0f1e40" stopOpacity="0.95" />
+                  </linearGradient>
+                  
+                  <linearGradient id="parkGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#047857" stopOpacity="0.18" />
+                    <stop offset="100%" stopColor="#065f46" stopOpacity="0.10" />
+                  </linearGradient>
+
+                  <radialGradient id="vehicleRadar" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                  </radialGradient>
+                  
+                  <filter id="shadowGlow" x="-10%" y="-10%" width="120%" height="120%">
+                    <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.5" />
+                  </filter>
+                </defs>
+
+                {/* A. GEOGRAPHIC BACKGROUND LAYERS */}
+                
+                {/* 1. Río de la Plata (Water body on top-right coast) */}
+                <path 
+                  d="M 320,0 C 440,70 580,120 800,160 L 800,0 Z" 
+                  fill="url(#riverGrad)" 
+                  stroke="#1d4ed8" 
+                  strokeWidth="1.5"
+                  opacity="0.85" 
+                />
+                
+                {/* Waves lines inside River */}
+                <path d="M 450,25 Q 490,40 530,25" fill="none" stroke="#2563eb" strokeWidth="1" opacity="0.3" />
+                <path d="M 600,50 Q 640,65 680,50" fill="none" stroke="#2563eb" strokeWidth="1" opacity="0.3" />
+                <path d="M 700,100 Q 730,110 760,100" fill="none" stroke="#2563eb" strokeWidth="1" opacity="0.3" />
+                
+                {/* Water Body Label */}
+                <text x="640" y="45" fill="#3b82f6" fontSize="9" fontWeight="black" letterSpacing="1.5" opacity="0.4" transform="rotate(11, 640, 45)">RÍO DE LA PLATA</text>
+
+                {/* 2. Green Spaces & Parks (Bosques de Palermo, Vicente López Reserve) */}
+                {/* Bosques de Palermo near Origin */}
+                <path 
+                  d="M 60,350 C 90,320 180,310 200,340 C 210,380 160,420 120,410 C 80,400 50,380 60,350 Z" 
+                  fill="url(#parkGrad)" 
+                  stroke="#10b981" 
+                  strokeWidth="1" 
+                  strokeDasharray="4 2"
+                  opacity="0.6" 
+                />
+                <text x="125" y="365" fill="#10b981" fontSize="8" fontWeight="bold" letterSpacing="0.5" opacity="0.5">Bosques de Palermo</text>
+
+                {/* Parque de la Costa / Green Belt near Suburbs node */}
+                <path 
+                  d="M 500,140 C 530,110 610,130 630,160 C 640,190 590,210 560,200 C 530,190 490,170 500,140 Z" 
+                  fill="url(#parkGrad)" 
+                  stroke="#10b981" 
+                  strokeWidth="1" 
+                  strokeDasharray="4 2"
+                  opacity="0.6" 
+                />
+                <text x="560" y="165" fill="#10b981" fontSize="8" fontWeight="bold" letterSpacing="0.5" opacity="0.5">Reserva Costera Norte</text>
+
+                {/* B. SECONDARY STREET GRID (Simulates detailed city block layout) */}
+                <g stroke="#1e293b" strokeWidth="1" opacity="0.5">
+                  {/* Horizontal streets */}
+                  <line x1="0" y1="180" x2="800" y2="180" />
+                  <line x1="0" y1="220" x2="800" y2="220" />
+                  <line x1="0" y1="280" x2="800" y2="280" />
+                  <line x1="0" y1="340" x2="800" y2="340" />
+                  <line x1="0" y1="400" x2="800" y2="400" />
+                  <line x1="0" y1="460" x2="800" y2="460" />
+                  
+                  {/* Vertical streets */}
+                  <line x1="100" y1="0" x2="100" y2="500" />
+                  <line x1="200" y1="0" x2="200" y2="500" />
+                  <line x1="320" y1="0" x2="320" y2="500" />
+                  <line x1="440" y1="0" x2="440" y2="500" />
+                  <line x1="560" y1="0" x2="560" y2="500" />
+                  <line x1="680" y1="0" x2="680" y2="500" />
+                </g>
+
+                {/* Diagonal streets */}
+                <g stroke="#1e293b" strokeWidth="1.5" opacity="0.4">
                   {decorativeRoads.map((road, i) => (
-                    <line key={i} x1={road.x1} y1={road.y1} x2={road.x2} y2={road.y2} />
+                    <line key={`dec-${i}`} x1={road.x1} y1={road.y1} x2={road.x2} y2={road.y2} />
                   ))}
                 </g>
 
-                {/* Major avenues / dark grey roads */}
-                <g stroke="#334155" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" opacity="0.6">
-                  <path d="M 50 450 Q 250 350 450 250 T 750 150" fill="none" />
+                {/* C. MAIN EXPRESSWAYS / HIGHLIGHTED ROAD SYSTEM */}
+                {/* Autopista Lugones / Panamericana Gray Underlayer */}
+                <g stroke="#1e293b" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" opacity="0.8">
                   <path d="M 120 400 L 720 120" fill="none" />
-                  <path d="M 100 200 L 700 400" fill="none" />
-                </g>
-                <g stroke="#475569" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" opacity="0.9">
                   <path d="M 50 450 Q 250 350 450 250 T 750 150" fill="none" />
-                  <path d="M 120 400 L 720 120" fill="none" />
                 </g>
+                <g stroke="#334155" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" opacity="0.9">
+                  <path d="M 120 400 L 720 120" fill="none" />
+                  <path d="M 50 450 Q 250 350 450 250 T 750 150" fill="none" />
+                </g>
+                {/* Dashed center markings on main expressway */}
+                <g stroke="#475569" strokeWidth="1" strokeDasharray="5 5" fill="none" opacity="0.7">
+                  <path d="M 120 400 L 720 120" />
+                  <path d="M 50 450 Q 250 350 450 250 T 750 150" />
+                </g>
+                
+                {/* Expressway Labels */}
+                <text x="350" y="295" fill="#475569" fontSize="7" fontWeight="black" textAnchor="middle" transform="rotate(-23, 350, 295)">AUTOPISTA ILLIA / LUGONES</text>
+                <text x="580" y="210" fill="#475569" fontSize="7" fontWeight="black" textAnchor="middle" transform="rotate(-23, 580, 210)">ACCESO NORTE / PANAMERICANA</text>
 
-                {/* 2. Actual Route Polyline Layer */}
-                {/* Background glow path */}
+                {/* D. THE LIVE DELIVERY ROUTE (Glow and Light Streams) */}
+                {/* 1. Underlying Blue Route Neon Glow */}
                 <path 
                   d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
                   fill="none" 
                   stroke="#3b82f6" 
-                  strokeWidth="6" 
+                  strokeWidth="8" 
                   strokeLinecap="round" 
                   strokeLinejoin="round" 
                   opacity="0.3"
                   className="blur-xs"
                 />
-                {/* Core route path */}
+                
+                {/* 2. Dotted Route Path Ahead */}
                 <path 
                   d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
                   fill="none" 
-                  stroke="#3483fa" 
+                  stroke="#1e3a8a" 
                   strokeWidth="4" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                />
+                <path 
+                  d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
+                  fill="none" 
+                  stroke="#3b82f6" 
+                  strokeWidth="3.5" 
                   strokeLinecap="round" 
                   strokeLinejoin="round" 
                   strokeDasharray="8 6"
                 />
 
-                {/* Highlighted completed route portion */}
+                {/* 3. Completed Route Neon Green Flowing Tracker */}
                 <path 
                   d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
                   fill="none" 
@@ -290,77 +475,136 @@ export function ProductTrackingView({
                   strokeWidth="4" 
                   strokeLinecap="round" 
                   strokeLinejoin="round" 
-                  strokeDasharray="none"
+                  className="animated-flow-line"
                   style={{
                     strokeDasharray: 2000,
                     strokeDashoffset: 2000 - (2000 * progress) / 100
                   }}
                 />
 
-                {/* 3. Checkpoint Markers */}
+                {/* E. MAP COMPASS ROSE & SCALE INDICATOR */}
+                {/* Compass Rose */}
+                <g transform="translate(740, 65)" opacity="0.85" filter="url(#shadowGlow)">
+                  <circle cx="0" cy="0" r="22" fill="#1e293b" stroke="#334155" strokeWidth="1.5" />
+                  <circle cx="0" cy="0" r="18" fill="none" stroke="#475569" strokeWidth="0.75" strokeDasharray="2 2" />
+                  
+                  {/* Compass directions pointers */}
+                  <line x1="0" y1="-16" x2="0" y2="16" stroke="#475569" strokeWidth="1" />
+                  <line x1="-16" y1="0" x2="16" y2="0" stroke="#475569" strokeWidth="1" />
+                  
+                  <polygon points="0,-18 -4,-5 4,-5" fill="#f97316" />
+                  <polygon points="0,18 -4,5 4,5" fill="#64748b" />
+                  <polygon points="-18,0 -5,-4 -5,4" fill="#64748b" />
+                  <polygon points="18,0 5,-4 5,4" fill="#64748b" />
+                  
+                  <text x="0" y="-23" fill="#cbd5e1" fontSize="8" fontWeight="black" textAnchor="middle">N</text>
+                  <text x="23" y="2.5" fill="#cbd5e1" fontSize="7" fontWeight="bold">E</text>
+                </g>
+
+                {/* Scale Rule indicator */}
+                <g transform="translate(40, 470)" opacity="0.85" filter="url(#shadowGlow)">
+                  <rect x="-5" y="-18" width="90" height="23" rx="4" fill="#0f172a/90" stroke="#1e293b" strokeWidth="0.5" />
+                  <line x1="0" y1="0" x2="80" y2="0" stroke="#94a3b8" strokeWidth="2" />
+                  <line x1="0" y1="-4" x2="0" y2="4" stroke="#94a3b8" strokeWidth="2" />
+                  <line x1="40" y1="-4" x2="40" y2="4" stroke="#94a3b8" strokeWidth="2" />
+                  <line x1="80" y1="-4" x2="80" y2="4" stroke="#94a3b8" strokeWidth="2" />
+                  <text x="40" y="-8" fill="#94a3b8" fontSize="8" fontWeight="bold" fontFamily="monospace" textAnchor="middle">ESCALA 1:50.000 (1 km)</text>
+                </g>
+
+                {/* F. CHECKPOINT NODE MARKERS (Teardrop pins with custom logos & badges) */}
                 {routePoints.map((point, index) => {
                   const isCompleted = progress >= (index / (routePoints.length - 1)) * 100;
                   const isActive = activePhaseIndex === index && progress < 100;
+
+                  // High-fidelity emoji icons for nodes to represent authentic stages
+                  const landmarkEmojis = ["🏢", "📦", "🛣️", "🏪", "🏠"];
+                  const pinColor = isCompleted 
+                    ? (index === 4 ? "#10b981" : "#059669") 
+                    : "#334155";
+                  const pinBorder = isActive 
+                    ? "#3b82f6" 
+                    : (isCompleted ? "#34d399" : "#475569");
 
                   return (
                     <g 
                       key={index} 
                       className="cursor-pointer group/node"
                       onClick={() => setSelectedCheckpoint(index)}
+                      filter="url(#shadowGlow)"
                     >
-                      {/* Interactive click trigger halo */}
-                      <circle 
-                        cx={point.x} 
-                        cy={point.y} 
-                        r="24" 
-                        fill="transparent" 
-                        className="hover:fill-white/5 transition-colors"
-                      />
-
-                      {/* Ripple halo for active checkpoint */}
+                      {/* Active Node Ripple Ring */}
                       {(isActive || (index === 4 && progress >= 100)) && (
                         <circle 
                           cx={point.x} 
                           cy={point.y} 
-                          r="18" 
+                          r="25" 
                           fill="none" 
-                          stroke={index === 4 ? "#10b981" : "#3483fa"} 
+                          stroke={index === 4 ? "#10b981" : "#3b82f6"} 
                           strokeWidth="2" 
-                          className="animate-ping" 
+                          className="pulsing-halo-map" 
                           style={{ transformOrigin: `${point.x}px ${point.y}px` }}
                         />
                       )}
 
-                      {/* Main marker circle */}
+                      {/* Click Halo */}
                       <circle 
                         cx={point.x} 
                         cy={point.y} 
-                        r={isActive ? "10" : "8"} 
-                        fill={isCompleted ? (index === 4 ? "#10b981" : "#00a650") : "#1e293b"} 
-                        stroke={isActive ? "#3483fa" : (isCompleted ? "#34d399" : "#475569")} 
-                        strokeWidth="3" 
-                        className="transition-all duration-300 group-hover/node:scale-125"
+                        r="28" 
+                        fill="transparent" 
+                        className="hover:fill-white/5 transition-colors"
+                      />
+
+                      {/* Outer Pin Body */}
+                      <path
+                        d={`M ${point.x} ${point.y + 12} 
+                           C ${point.x - 14} ${point.y - 2} ${point.x - 12} ${point.y - 18} ${point.x} ${point.y - 18} 
+                           C ${point.x + 12} ${point.y - 18} ${point.x + 14} ${point.y - 2} ${point.x} ${point.y + 12} Z`}
+                        fill={pinColor}
+                        stroke={pinBorder}
+                        strokeWidth={isActive ? "2.5" : "1.5"}
+                        className="transition-all duration-300 group-hover/node:scale-115"
                         style={{ transformOrigin: `${point.x}px ${point.y}px` }}
                       />
 
-                      {/* Text Label popup on hover */}
-                      <g className="opacity-0 group-hover/node:opacity-100 transition-opacity duration-200 pointer-events-none">
+                      {/* Little Inner circle */}
+                      <circle 
+                        cx={point.x} 
+                        cy={point.y - 4} 
+                        r="9" 
+                        fill="#0f172a" 
+                      />
+
+                      {/* Emoji Icon representer inside Pin */}
+                      <text 
+                        x={point.x} 
+                        y={point.y + 0.5} 
+                        fontSize="10" 
+                        textAnchor="middle"
+                        className="pointer-events-none select-none"
+                      >
+                        {landmarkEmojis[index]}
+                      </text>
+
+                      {/* High-visibility node label label plate on map */}
+                      <g transform={`translate(${point.x}, ${point.y - 26})`}>
                         <rect 
-                          x={point.x - 75} 
-                          y={point.y - 42} 
-                          width="150" 
-                          height="30" 
-                          rx="6" 
+                          x="-65" 
+                          y="-9" 
+                          width="130" 
+                          height="16" 
+                          rx="4" 
                           fill="#0f172a" 
-                          stroke="#334155" 
-                          strokeWidth="1"
+                          stroke={isActive ? "#3b82f6" : "#1e293b"} 
+                          strokeWidth="1.5"
+                          opacity="0.95"
                         />
                         <text 
-                          x={point.x} 
-                          y={point.y - 23} 
-                          fill="#ffffff" 
-                          fontSize="10" 
-                          fontWeight="bold" 
+                          x="0" 
+                          y="2" 
+                          fill={isActive ? "#3b82f6" : "#f8fafc"} 
+                          fontSize="8" 
+                          fontWeight="black" 
                           textAnchor="middle"
                         >
                           {point.label}
@@ -370,43 +614,41 @@ export function ProductTrackingView({
                   );
                 })}
 
-                {/* 4. Moving Delivery Vehicle (Uber / Mercado Libre style truck) */}
+                {/* G. THE MOVING VEHICLE (Smooth vector path translation & heading rotation) */}
                 {progress < 100 && (
                   <g 
                     style={{ 
-                      transform: `translate(${vehiclePos.x}px, ${vehiclePos.y}px)`,
-                      transition: 'transform 0.1s linear'
+                      transform: `translate(${vehiclePos.x}px, ${vehiclePos.y}px) rotate(${vehiclePos.angle}deg)`,
+                      transition: 'transform 0.12s linear',
+                      transformOrigin: '0px 0px'
                     }}
+                    filter="url(#shadowGlow)"
                   >
-                    {/* Pulsating radar halo around delivery vehicle */}
-                    <circle cx="0" cy="0" r="28" fill="rgba(52, 131, 250, 0.15)" className="animate-pulse" />
-                    <circle cx="0" cy="0" r="14" fill="#3483fa" className="shadow-lg" />
+                    {/* Glowing radar dome underneath vehicle */}
+                    <circle cx="0" cy="0" r="28" fill="url(#vehicleRadar)" className="animate-pulse" />
                     
-                    {/* Directional arrow/headlight glow */}
-                    <polygon points="0,-6 14,0 0,6" fill="#3483fa" opacity="0.8" style={{ transform: 'rotate(-45deg)' }} />
+                    {/* Glowing footprint ring */}
+                    <circle cx="0" cy="0" r="14" fill="#1e293b" stroke="#3b82f6" strokeWidth="2.5" />
+                    
+                    {/* Little headlight directional beam cone */}
+                    <path d="M 12 -6 L 36 -12 Q 44 0 36 12 L 12 6 Z" fill="#3b82f6" opacity="0.22" />
 
-                    {/* High-fidelity car/bike SVG symbol */}
-                    <g transform="translate(-8, -8) scale(0.7)">
-                      <path 
-                        d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v10h3 M7 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4M17 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4" 
-                        fill="none" 
-                        stroke="#ffffff" 
-                        strokeWidth="2.5" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                      />
+                    {/* Highly polished vehicle body */}
+                    <g transform="translate(-10, -9) scale(0.95)">
+                      {/* Truck container */}
+                      <rect x="1" y="2" width="12" height="11" rx="2" fill="#3b82f6" stroke="#ffffff" strokeWidth="1" />
+                      {/* Driver Cabin */}
+                      <path d="M 13 4 L 17 4 L 20 8 L 20 13 L 13 13 Z" fill="#38bdf8" stroke="#ffffff" strokeWidth="1" />
+                      {/* Cabin Window */}
+                      <polygon points="14,6 16,6 18,9 14,9" fill="#0f172a" />
+                      {/* Front and back wheels */}
+                      <circle cx="4" cy="14" r="2.2" fill="#020617" stroke="#ffffff" strokeWidth="0.75" />
+                      <circle cx="15" cy="14" r="2.2" fill="#020617" stroke="#ffffff" strokeWidth="0.75" />
                     </g>
                   </g>
                 )}
-
-                {/* 5. Start and End Landmark Labels on Map */}
-                <g transform={`translate(${routePoints[0].x}, ${routePoints[0].y + 24})`}>
-                  <text fill="#64748b" fontSize="9" fontWeight="black" textAnchor="middle" letterSpacing="0.5">ORIGEN: NOVA3D</text>
-                </g>
-                <g transform={`translate(${routePoints[4].x}, ${routePoints[4].y - 20})`}>
-                  <text fill="#10b981" fontSize="9" fontWeight="black" textAnchor="middle" letterSpacing="0.5">DESTINO: TU CASA</text>
-                </g>
               </svg>
+
 
               {/* Map Footer Control Panel (Uber / Player controls) */}
               <div className="absolute bottom-4 left-4 right-4 z-10 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4 text-white">
