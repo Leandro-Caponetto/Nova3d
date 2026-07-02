@@ -276,15 +276,93 @@ app.post("/api/mercadopago/success-payment", async (req, res) => {
         </html>
       `;
 
-      await resendClient.emails.send({
-        from: 'Nova3D <onboarding@resend.dev>',
-        to: [payerEmail, 'caponettopeppers@gmail.com'],
-        subject: `🧾 Tu factura de compra Nova3D - Orden #${orderNumber}`,
-        html: emailHtml
-      });
-      console.log(`[PAYMENT EMAIL] Invoice successfully sent to ${payerEmail}`);
+      // Send to customer
+      try {
+        await resendClient.emails.send({
+          from: 'Nova3D <onboarding@resend.dev>',
+          to: [payerEmail],
+          subject: `🧾 Tu factura de compra Nova3D - Orden #${orderNumber}`,
+          html: emailHtml
+        });
+        console.log(`[PAYMENT EMAIL] Invoice successfully sent to customer ${payerEmail}`);
+      } catch (err) {
+        console.error("Error sending email to customer:", err);
+      }
+
+      // Send separate notification email to the administrator (caponettopeppers@gmail.com)
+      try {
+        const adminEmailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <body style="font-family: Arial, sans-serif; color: #1e293b; background-color: #f8fafc; padding: 20px; margin: 0;">
+            <div style="max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+              <div style="background-color: #0f172a; padding: 24px; text-align: center; color: #ffffff;">
+                <h1 style="margin: 0; font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">🔔 NUEVO PEDIDO RECIBIDO</h1>
+                <p style="margin: 4px 0 0; font-size: 13px; opacity: 0.8; font-weight: 500;">Orden #${orderNumber}</p>
+              </div>
+              <div style="padding: 24px;">
+                <h2 style="font-size: 14px; margin-top: 0; border-b: 1px solid #e2e8f0; padding-bottom: 8px; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">Detalles del Envío y Cliente</h2>
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; font-weight: bold; width: 35%;">Cliente:</td>
+                    <td style="padding: 6px 0; font-weight: 500;">${payerEmail}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; font-weight: bold;">Dirección de Envío:</td>
+                    <td style="padding: 6px 0; font-weight: bold; color: #10b981;">${locationText || "No especificada (Palermo, GBA)"}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; font-weight: bold;">Fecha:</td>
+                    <td style="padding: 6px 0; font-weight: 500;">${currentDate}</td>
+                  </tr>
+                </table>
+
+                <h2 style="font-size: 14px; border-b: 1px solid #e2e8f0; padding-bottom: 8px; margin-top: 24px; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">Detalle de la Compra</h2>
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                  <thead>
+                    <tr style="background-color: #f8fafc;">
+                      <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 11px;">Producto</th>
+                      <th style="padding: 8px; text-align: center; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 11px;">Cantidad</th>
+                      <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 11px;">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="padding: 12px 8px; border-bottom: 1px solid #f1f5f9;">
+                        <strong>${product?.name}</strong><br/>
+                        <span style="font-size: 11px; color: #64748b;">ID: ${product?.id}</span>
+                      </td>
+                      <td style="padding: 12px 8px; text-align: center; font-weight: bold;">${quantity}</td>
+                      <td style="padding: 12px 8px; text-align: right; font-weight: bold; color: #0f172a;">$ ${(product?.price * quantity).toLocaleString('es-AR')}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div style="margin-top: 24px; padding: 16px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; text-align: right;">
+                  <span style="font-size: 12px; color: #64748b; font-weight: bold; text-transform: uppercase;">Monto Total Cobrado:</span>
+                  <strong style="font-size: 20px; color: #3483fa; margin-left: 8px;">$ ${Number(totalAmount).toLocaleString('es-AR')}</strong>
+                </div>
+              </div>
+              <div style="background-color: #f1f5f9; padding: 16px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0;">
+                <p style="margin: 0;">Nova3D Gestor de Ventas - Automatización de Alertas</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        await resendClient.emails.send({
+          from: 'Nova3D Ventas <onboarding@resend.dev>',
+          to: ['caponettopeppers@gmail.com'],
+          subject: `🔔 NUEVA VENTA EN NOVA3D - Orden #${orderNumber}`,
+          html: adminEmailHtml
+        });
+        console.log(`[PAYMENT EMAIL] Admin alert successfully sent to caponettopeppers@gmail.com`);
+      } catch (err) {
+        console.error("Error sending email to admin:", err);
+      }
     } else {
-      console.warn("RESEND_API_KEY no configurada o falta email del pagador. Factura simulada en consola.");
+      console.warn("RESEND_API_KEY no configurada o falta email del pagador. Alerta simulada en consola.");
     }
 
     res.json({ success: true, orderNumber });

@@ -45,6 +45,8 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
   const [isEditingPostal, setIsEditingPostal] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSubSection, setActiveSubSection] = useState<'store' | 'tracking'>('store');
+  const [checkoutEmail, setCheckoutEmail] = useState(user?.email || '');
+  const [checkoutAddress, setCheckoutAddress] = useState('');
   
   // Favorites & Share States
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -152,6 +154,60 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
     });
   }, [products, searchQuery, activeCategory]);
 
+  // Handle redirect from real Mercado Pago payment success
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment_status');
+    if (paymentStatus === 'success') {
+      // Clear URL params without reloading page
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+
+      // Trigger success payment logic
+      const processRedirectSuccess = async () => {
+        try {
+          const savedData = localStorage.getItem('ml_pending_purchase');
+          if (savedData) {
+            const { product, quantity, payerEmail, locationText } = JSON.parse(savedData);
+            
+            // Set local states so the UI can display them and focus on them
+            setSelectedProduct(product);
+            setQuantity(quantity);
+            setCheckoutEmail(payerEmail);
+            setCheckoutAddress(locationText);
+            setShowMpModal(true);
+            setSimulatedPaymentSuccess(true);
+            
+            // Call backend API to trigger emails to customer and admin
+            const response = await fetch('/api/mercadopago/success-payment', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                product,
+                quantity,
+                totalAmount: product.price * quantity,
+                payerEmail,
+                locationText
+              })
+            });
+            const data = await response.json();
+            if (data.success) {
+              console.log("Invoice email sent on redirect success", data);
+            }
+            
+            // Clear pending purchase
+            localStorage.removeItem('ml_pending_purchase');
+          }
+        } catch (e) {
+          console.error("Error processing redirect success:", e);
+        }
+      };
+      processRedirectSuccess();
+    }
+  }, [products]);
+
   const handleAddQuestion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newQuestion.trim()) return;
@@ -182,6 +238,11 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
     setShowMpModal(true);
     setSimulatedPaymentSuccess(false);
     
+    const initialEmail = user?.email || checkoutEmail || 'comprador-test@example.com';
+    const initialAddress = checkoutAddress || `Calle Falsa 123, ${locationText}`;
+    setCheckoutEmail(initialEmail);
+    setCheckoutAddress(initialAddress);
+    
     try {
       const meta = unpackMetadata(product.description);
       if (meta.mpLink) {
@@ -203,14 +264,24 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
             quantity: qty,
             images: product.images
           }],
-          payerEmail: user?.email || 'comprador-test@example.com'
+          payerEmail: initialEmail
         })
       });
 
       const data = await response.json();
       if (data.init_point) {
         setCheckoutUrl(data.init_point);
-        // If it is sandbox simulation, we let them click to go or sim payment
+        // Save pending purchase details for redirection success
+        try {
+          localStorage.setItem('ml_pending_purchase', JSON.stringify({
+            product: { id: product.id, name: product.name, price: product.price, images: product.images },
+            quantity: qty,
+            payerEmail: initialEmail,
+            locationText: initialAddress
+          }));
+        } catch (e) {
+          console.error("Failed to save pending purchase", e);
+        }
       } else {
         setCustomAlert({
           show: true,
@@ -244,8 +315,8 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
           product: selectedProduct,
           quantity: quantity,
           totalAmount: (selectedProduct?.price || 0) * quantity,
-          payerEmail: user?.email || 'caponettopeppers@gmail.com',
-          locationText: locationText
+          payerEmail: checkoutEmail || user?.email || 'caponettopeppers@gmail.com',
+          locationText: checkoutAddress || `Calle Falsa 123, ${locationText}`
         })
       });
       const data = await response.json();
@@ -1043,6 +1114,33 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
                     <div className="flex justify-between text-sm">
                       <span className="font-bold">{selectedProduct?.name} (x{quantity})</span>
                       <span className="font-bold text-gray-900">$ {((selectedProduct?.price || 0) * quantity).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="border border-gray-200 rounded-lg p-4 bg-white space-y-4">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block border-b border-gray-100 pb-2 text-blue-600">Información del Comprador y Envío</span>
+                    
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Email para la Factura</label>
+                      <input 
+                        type="email"
+                        value={checkoutEmail}
+                        onChange={(e) => setCheckoutEmail(e.target.value)}
+                        placeholder="ejemplo@correo.com"
+                        className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none text-gray-800"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Dirección de Envío Completa</label>
+                      <input 
+                        type="text"
+                        value={checkoutAddress}
+                        onChange={(e) => setCheckoutAddress(e.target.value)}
+                        placeholder="Calle, Altura, Piso/Depto, Localidad"
+                        className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none text-gray-800"
+                      />
+                      <span className="text-[9px] text-gray-400 font-medium italic block">Se enviará la factura de compra y alerta de envío a este email y dirección física.</span>
                     </div>
                   </div>
 

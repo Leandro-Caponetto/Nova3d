@@ -79,6 +79,14 @@ export default function App() {
     document.documentElement.className = theme;
   }, [theme]);
 
+  // Handle Mercado Pago successful return URL redirect to shop view
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment_status') === 'success') {
+      setCurrentTab('shop');
+    }
+  }, []);
+
   // Auth Session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
