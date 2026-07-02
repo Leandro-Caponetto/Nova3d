@@ -55,6 +55,7 @@ interface LeafletMapProps {
   onMapDrag: () => void;
   setSelectedCheckpoint: (index: number) => void;
   theme: 'dark' | 'light';
+  osrmRoutePoints: Array<{ lat: number; lng: number }>;
 }
 
 function LeafletMapComponent({
@@ -65,7 +66,8 @@ function LeafletMapComponent({
   followDriver,
   onMapDrag,
   setSelectedCheckpoint,
-  theme
+  theme,
+  osrmRoutePoints
 }: LeafletMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -78,10 +80,10 @@ function LeafletMapComponent({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Create map instance
+    // Create map instance - set default zoom to 15 for excellent street name/GPS detail
     const map = L.map(containerRef.current, {
       center: [center.lat, center.lng],
-      zoom: 13,
+      zoom: 15,
       zoomControl: true,
       attributionControl: false,
     });
@@ -101,7 +103,10 @@ function LeafletMapComponent({
     map.on('dragstart', onMapDrag);
 
     // Create route polyline
-    const latLngs = geoCheckpoints.map(c => [c.lat, c.lng] as [number, number]);
+    const latLngs = osrmRoutePoints.length > 0
+      ? osrmRoutePoints.map(p => [p.lat, p.lng] as [number, number])
+      : geoCheckpoints.map(c => [c.lat, c.lng] as [number, number]);
+
     const routePolyline = L.polyline(latLngs, {
       color: theme === 'dark' ? '#3b82f6' : '#2563eb',
       weight: 4,
@@ -179,7 +184,7 @@ function LeafletMapComponent({
       map.remove();
       mapRef.current = null;
     };
-  }, [theme]);
+  }, [theme, osrmRoutePoints]);
 
   // Update Driver Marker, Polylines and Map Pan
   useEffect(() => {
@@ -188,14 +193,23 @@ function LeafletMapComponent({
 
     // 1. Update Completed Polyline path
     const completedPath: [number, number][] = [];
-    const pointCount = geoCheckpoints.length;
-    const segmentWidth = 100 / (pointCount - 1);
-    const currentIndex = Math.min(pointCount - 2, Math.floor(progress / segmentWidth));
-    
-    for (let i = 0; i <= currentIndex; i++) {
-      completedPath.push([geoCheckpoints[i].lat, geoCheckpoints[i].lng]);
+    if (osrmRoutePoints.length > 0) {
+      const pointCount = osrmRoutePoints.length;
+      const maxIndex = Math.min(pointCount - 1, Math.floor((progress / 100) * (pointCount - 1)));
+      for (let i = 0; i <= maxIndex; i++) {
+        completedPath.push([osrmRoutePoints[i].lat, osrmRoutePoints[i].lng]);
+      }
+      completedPath.push([center.lat, center.lng]);
+    } else {
+      const pointCount = geoCheckpoints.length;
+      const segmentWidth = 100 / (pointCount - 1);
+      const currentIndex = Math.min(pointCount - 2, Math.floor(progress / segmentWidth));
+      
+      for (let i = 0; i <= currentIndex; i++) {
+        completedPath.push([geoCheckpoints[i].lat, geoCheckpoints[i].lng]);
+      }
+      completedPath.push([center.lat, center.lng]);
     }
-    completedPath.push([center.lat, center.lng]);
 
     if (completedPolylineRef.current) {
       completedPolylineRef.current.setLatLngs(completedPath);
@@ -275,7 +289,7 @@ function LeafletMapComponent({
     if (followDriver) {
       map.panTo([center.lat, center.lng]);
     }
-  }, [center.lat, center.lng, center.heading, progress, followDriver, activePhaseIndex]);
+  }, [center.lat, center.lng, center.heading, progress, followDriver, activePhaseIndex, osrmRoutePoints]);
 
   return <div ref={containerRef} className="w-full h-full rounded-2xl" style={{ minHeight: '100%', zIndex: 1 }} />;
 }
@@ -505,8 +519,127 @@ export function ProductTrackingView({
     { lat: -34.4815, lng: -58.5226, label: "Tu Domicilio", sub: locationText || "San Isidro, GBA", emoji: "🏠" }
   ], [locationText]);
 
+  // Keep track of downloaded real-world street points and step info (OSRM public keyless API)
+  const [osrmRoutePoints, setOsrmRoutePoints] = useState<Array<{ lat: number; lng: number }>>([]);
+  const [osrmSteps, setOsrmSteps] = useState<Array<{ name: string; lat: number; lng: number; instruction?: string }>>([]);
+  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
+
+  // Fetch real street-by-street GPS route coordinates from free OSRM Routing API
+  useEffect(() => {
+    let active = true;
+    setIsLoadingRoute(true);
+    
+    const fetchRoute = async () => {
+      try {
+        const queryCoords = geoCheckpoints.map(c => `${c.lng},${c.lat}`).join(';');
+        const url = `https://router.project-osrm.org/route/v1/driving/${queryCoords}?overview=full&geometries=geojson&steps=true`;
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('OSRM routing API response error');
+        const data = await response.json();
+        
+        if (!active) return;
+        
+        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          
+          // Extract full path coordinates (lon, lat in geojson converted to lat, lng)
+          const coords: Array<{ lat: number; lng: number }> = route.geometry.coordinates.map(
+            (c: [number, number]) => ({ lat: c[1], lng: c[0] })
+          );
+          
+          // Extract steps to get actual street names and turn instructions
+          const stepsList: Array<{ name: string; lat: number; lng: number; instruction?: string }> = [];
+          
+          if (route.legs) {
+            route.legs.forEach((leg: any) => {
+              if (leg.steps) {
+                leg.steps.forEach((step: any) => {
+                  const streetName = step.name || '';
+                  const [lon, lat] = step.maneuver.location;
+                  const type = step.maneuver.type || 'drive';
+                  const modifier = step.maneuver.modifier || '';
+                  
+                  // Translate turn maneuvers to Spanish for high-fidelity GPS realism
+                  let instruction = `Seguir por ${streetName || 'calle'}`;
+                  if (type === 'turn') {
+                    const direction = modifier === 'left' ? 'a la izquierda' : modifier === 'right' ? 'a la derecha' : '';
+                    instruction = `Girar ${direction} en ${streetName || 'calle'}`;
+                  } else if (type === 'new name') {
+                    instruction = `Continuar por ${streetName}`;
+                  } else if (type === 'merge') {
+                    instruction = `Incorporarse a ${streetName}`;
+                  } else if (type === 'on ramp') {
+                    instruction = `Tomar la rampa hacia ${streetName}`;
+                  } else if (type === 'off ramp') {
+                    instruction = `Tomar la rampa de salida hacia ${streetName}`;
+                  } else if (type === 'roundabout') {
+                    instruction = `Ingresar a la rotonda hacia ${streetName}`;
+                  }
+                  
+                  if (streetName && streetName.trim().length > 0) {
+                    stepsList.push({
+                      name: streetName,
+                      lat,
+                      lng: lon,
+                      instruction
+                    });
+                  }
+                });
+              }
+            });
+          }
+          
+          setOsrmRoutePoints(coords);
+          setOsrmSteps(stepsList);
+        }
+      } catch (err) {
+        console.error('Failed to retrieve free GPS OSRM street route:', err);
+      } finally {
+        if (active) setIsLoadingRoute(false);
+      }
+    };
+    
+    fetchRoute();
+    
+    return () => {
+      active = false;
+    };
+  }, [geoCheckpoints]);
+
   // Calculate latitude and longitude at progress percent
   const getLatLngAtProgress = (pct: number) => {
+    // If we have precise OSRM routing points, trace the real streets
+    if (osrmRoutePoints.length > 0) {
+      const pointCount = osrmRoutePoints.length;
+      if (pct <= 0) {
+        const pA = osrmRoutePoints[0];
+        const pB = osrmRoutePoints[1] || pA;
+        const heading = Math.atan2(pB.lng - pA.lng, pB.lat - pA.lat) * (180 / Math.PI);
+        return { lat: pA.lat, lng: pA.lng, heading };
+      }
+      if (pct >= 100) {
+        const pA = osrmRoutePoints[pointCount - 2] || osrmRoutePoints[pointCount - 1];
+        const pB = osrmRoutePoints[pointCount - 1];
+        const heading = Math.atan2(pB.lng - pA.lng, pB.lat - pA.lat) * (180 / Math.PI);
+        return { lat: pB.lat, lng: pB.lng, heading };
+      }
+
+      const floatIndex = (pct / 100) * (pointCount - 1);
+      const index = Math.floor(floatIndex);
+      const segmentPct = floatIndex - index;
+
+      const pA = osrmRoutePoints[index];
+      const pB = osrmRoutePoints[index + 1] || pA;
+
+      const lat = pA.lat + (pB.lat - pA.lat) * segmentPct;
+      const lng = pA.lng + (pB.lng - pA.lng) * segmentPct;
+      const heading = Math.atan2(pB.lng - pA.lng, pB.lat - pA.lat) * (180 / Math.PI);
+
+      return { lat, lng, heading };
+    }
+
+    // Fallback: raw straight-line interpolation if OSRM hasn't loaded yet
     const pointCount = geoCheckpoints.length;
     if (pointCount === 0) return { lat: -34.5889, lng: -58.4306, heading: 0 };
     if (pct <= 0) {
@@ -605,14 +738,42 @@ export function ProductTrackingView({
   // Live navigation current street/milestone HUD
   const currentStreetName = useMemo(() => {
     if (progress >= 100) return "Entregado - ¡Gracias por elegir Nova3D!";
+    if (progress < 10) return "Preparando orden en la granja de impresión 3D Nova3D";
+
+    if (osrmSteps.length > 0) {
+      // Find the step in OSRM that is closest to our driver's current coordinates
+      let closestStep = osrmSteps[0];
+      let minDistanceSq = Infinity;
+      let closestIdx = 0;
+
+      osrmSteps.forEach((step, idx) => {
+        const dLat = step.lat - currentLatLng.lat;
+        const dLng = step.lng - currentLatLng.lng;
+        const distSq = dLat * dLat + dLng * dLng;
+        if (distSq < minDistanceSq) {
+          minDistanceSq = distSq;
+          closestStep = step;
+          closestIdx = idx;
+        }
+      });
+
+      // Show the current instruction + upcoming street name
+      const nextStep = closestIdx + 1 < osrmSteps.length ? osrmSteps[closestIdx + 1] : null;
+      let msg = closestStep.instruction || `Transitando por ${closestStep.name}`;
+      if (nextStep && nextStep.name && nextStep.name !== closestStep.name) {
+        msg += ` ➜ Próxima intersección: ${nextStep.name}`;
+      }
+      return msg;
+    }
+
+    // High-fidelity fallback if OSRM is loading or slow
     if (progress >= 85) return "Llegando a destino - Ingresando a tu cuadra";
     if (progress >= 75) return "Últimas cuadras - Transitando por Av. Maipú / San Isidro";
     if (progress >= 55) return "En viaje - Transitando por Autopista Panamericana (Ruta 9)";
     if (progress >= 35) return "Saliendo de CABA - Transitando por cruce de Av. General Paz";
     if (progress >= 20) return "En viaje - Transitando por Autopista Cantilo / Av. Lugones";
-    if (progress >= 10) return "Despachado - Saliendo por Av. del Libertador (Palermo)";
-    return "Preparando orden en la granja de impresión 3D Nova3D";
-  }, [progress]);
+    return "Despachado - Saliendo por Av. del Libertador (Palermo)";
+  }, [progress, osrmSteps, currentLatLng]);
 
   // Determine current active phase based on progress
   const activePhaseIndex = useMemo(() => {
@@ -769,7 +930,12 @@ export function ProductTrackingView({
 
                       {/* Route Polyline Ahead */}
                       <MapPolyline 
-                        path={geoCheckpoints.map(c => ({ lat: c.lat, lng: c.lng }))} 
+                        path={useMemo(() => {
+                          if (osrmRoutePoints.length > 0) {
+                            return osrmRoutePoints.map(p => ({ lat: p.lat, lng: p.lng }));
+                          }
+                          return geoCheckpoints.map(c => ({ lat: c.lat, lng: c.lng }));
+                        }, [osrmRoutePoints, geoCheckpoints])} 
                         options={{ 
                           strokeColor: theme === 'dark' ? '#3b82f6' : '#2563eb', 
                           strokeOpacity: 0.4, 
@@ -781,15 +947,23 @@ export function ProductTrackingView({
                       <MapPolyline 
                         path={useMemo(() => {
                           const path: google.maps.LatLngLiteral[] = [];
-                          const pointCount = geoCheckpoints.length;
-                          const segmentWidth = 100 / (pointCount - 1);
-                          const currentIndex = Math.min(pointCount - 2, Math.floor(progress / segmentWidth));
-                          for (let i = 0; i <= currentIndex; i++) {
-                            path.push({ lat: geoCheckpoints[i].lat, lng: geoCheckpoints[i].lng });
+                          if (osrmRoutePoints.length > 0) {
+                            const pointCount = osrmRoutePoints.length;
+                            const maxIndex = Math.min(pointCount - 1, Math.floor((progress / 100) * (pointCount - 1)));
+                            for (let i = 0; i <= maxIndex; i++) {
+                              path.push({ lat: osrmRoutePoints[i].lat, lng: osrmRoutePoints[i].lng });
+                            }
+                          } else {
+                            const pointCount = geoCheckpoints.length;
+                            const segmentWidth = 100 / (pointCount - 1);
+                            const currentIndex = Math.min(pointCount - 2, Math.floor(progress / segmentWidth));
+                            for (let i = 0; i <= currentIndex; i++) {
+                              path.push({ lat: geoCheckpoints[i].lat, lng: geoCheckpoints[i].lng });
+                            }
                           }
                           path.push({ lat: currentLatLng.lat, lng: currentLatLng.lng });
                           return path;
-                        }, [geoCheckpoints, progress, currentLatLng])} 
+                        }, [osrmRoutePoints, geoCheckpoints, progress, currentLatLng])} 
                         options={{ 
                           strokeColor: '#10b981', 
                           strokeOpacity: 0.9, 
@@ -925,6 +1099,7 @@ export function ProductTrackingView({
                   onMapDrag={() => setFollowDriver(false)}
                   setSelectedCheckpoint={setSelectedCheckpoint}
                   theme={theme}
+                  osrmRoutePoints={osrmRoutePoints}
                 />
                 
                 {/* Float controls on Leaflet */}
