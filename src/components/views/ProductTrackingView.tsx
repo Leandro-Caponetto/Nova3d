@@ -1,0 +1,695 @@
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { motion } from 'motion/react';
+import { 
+  MapPin, Truck, Navigation, Shield, Check, Phone, MessageSquare, 
+  Clock, Map as MapIcon, Play, Pause, RotateCcw, AlertCircle, 
+  Sparkles, Star, ChevronRight, ArrowLeft, RefreshCw, UserCheck
+} from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { Product } from '../../types';
+
+interface ProductTrackingViewProps {
+  product: Product | null;
+  quantity: number;
+  locationText: string;
+  postalCode: string;
+  onBackToStore: () => void;
+  theme: 'dark' | 'light';
+}
+
+export function ProductTrackingView({
+  product,
+  quantity,
+  locationText,
+  postalCode,
+  onBackToStore,
+  theme
+}: ProductTrackingViewProps) {
+  // Use either the purchased product or a high-fidelity default
+  const activeProduct = product || {
+    id: 'default-tracker',
+    name: 'Soporte de Auriculares Articulado Nova3D (Edición Especial)',
+    price: 18500,
+    images: ['https://images.unsplash.com/photo-1616440347437-b1c73416efc2?w=500&auto=format&fit=crop&q=80'],
+    category: 'Soportes',
+    description: 'Soporte articulado premium de auriculares con terminación mate.',
+    stock: 5,
+    rating: 5,
+    reviews: []
+  } as Product;
+
+  const orderNumber = useRef("NV" + Math.floor(100000 + Math.random() * 900000));
+  const trackingCode = useRef("AR-" + Math.floor(100000000 + Math.random() * 900000000) + "-ML");
+
+  // Tracking animation states
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [progress, setProgress] = useState(35); // Initial progress starts halfway through transit
+  const [simulationSpeed, setSimulationSpeed] = useState(1); // multiplier
+  const [selectedCheckpoint, setSelectedCheckpoint] = useState<number | null>(null);
+
+  // Driver states
+  const driver = {
+    name: "Ramiro Gómez",
+    rating: 4.9,
+    reviewsCount: 1420,
+    vehicle: "Moto Honda Tornado 250",
+    plate: "A123BCD",
+    phone: "+5491144445555",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+  };
+
+  // Define route points in local map space (SVG viewbox 800 x 500)
+  const routePoints = [
+    { x: 120, y: 390, label: "Fábrica Nova3D", sub: "Palermo, CABA", status: "finished", info: "Tu producto se imprimió en 3D con filamento PLA+ de alta densidad, se ensambló y fue despachado de nuestra granja de impresión." },
+    { x: 260, y: 310, label: "Centro de Clasificación Flex", sub: "CABA Centro", status: "finished", info: "El repartidor Ramiro Gómez retiró la orden y validó los parámetros de control de calidad." },
+    { x: 420, y: 250, label: "Av. General Paz Checkpoint", sub: "Límite CABA", status: "transit", info: "El vehículo de reparto se encuentra transitando vías rápidas con tráfico moderado hacia el destino." },
+    { x: 580, y: 190, label: "Distribuidora Zona Norte / Sur", sub: "Plataforma de Cercanía", status: "pending", info: "Punto de control previo a la entrega directa." },
+    { x: 720, y: 110, label: "Tu Domicilio", sub: locationText, status: "pending", info: "Entrega coordinada y firma digital en destino." }
+  ];
+
+  // Calculate current coordinates of vehicle on the path based on progress (0 - 100)
+  const getCoordinatesAtProgress = (pct: number) => {
+    const pointCount = routePoints.length;
+    if (pointCount === 0) return { x: 0, y: 0 };
+    if (pct <= 0) return { x: routePoints[0].x, y: routePoints[0].y };
+    if (pct >= 100) return { x: routePoints[pointCount - 1].x, y: routePoints[pointCount - 1].y };
+
+    // Find between which two points we are
+    const segmentWidth = 100 / (pointCount - 1);
+    const index = Math.floor(pct / segmentWidth);
+    const segmentPct = (pct % segmentWidth) / segmentWidth;
+
+    const pA = routePoints[index];
+    const pB = routePoints[index + 1];
+
+    if (!pA || !pB) return { x: 0, y: 0 };
+
+    return {
+      x: pA.x + (pB.x - pA.x) * segmentPct,
+      y: pA.y + (pB.y - pA.y) * segmentPct
+    };
+  };
+
+  const vehiclePos = getCoordinatesAtProgress(progress);
+
+  // Determine current active phase based on progress
+  const activePhaseIndex = useMemo(() => {
+    if (progress >= 100) return 4; // Entregado
+    if (progress >= 75) return 3;  // En puerta / Próximo
+    if (progress >= 25) return 2;  // En viaje / Reparto
+    if (progress >= 10) return 1;  // Despachado
+    return 0; // Preparando
+  }, [progress]);
+
+  // Handle auto-progress simulation loop
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          setIsPlaying(false);
+          return 100;
+        }
+        return Math.min(100, prev + 0.5 * simulationSpeed);
+      });
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, simulationSpeed]);
+
+  // Derived tracking values
+  const distanceRemaining = Math.max(0, parseFloat(((100 - progress) * 0.12).toFixed(1))); // Simulated km
+  const etaMinutes = Math.max(0, Math.ceil((100 - progress) * 0.8)); // Simulated mins
+
+  // Static auxiliary road lines in SVG coordinates to look like a high-tech grid map
+  const decorativeRoads = [
+    { x1: 50, y1: 450, x2: 400, y2: 100 },
+    { x1: 100, y1: 450, x2: 750, y2: 150 },
+    { x1: 50, y1: 300, x2: 800, y2: 300 },
+    { x1: 300, y1: 500, x2: 300, y2: 0 },
+    { x1: 550, y1: 500, x2: 550, y2: 0 },
+    { x1: 120, y1: 100, x2: 700, y2: 450 },
+    { x1: 150, y1: 200, x2: 500, y2: 450 }
+  ];
+
+  const handleResetSimulation = () => {
+    setProgress(0);
+    setIsPlaying(true);
+  };
+
+  return (
+    <div className={cn(
+      "max-w-6xl mx-auto px-4 py-8 animate-fade-in font-sans",
+      theme === 'dark' ? "text-slate-100" : "text-slate-900"
+    )}>
+      {/* Header breadcrumb & Navigation */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-gray-200/60 pb-6">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={onBackToStore}
+            className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-full border border-gray-200/50 dark:border-slate-700/50 shadow-sm transition-all"
+            title="Volver a la tienda"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black uppercase tracking-wider bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 px-2.5 py-1 rounded">
+                Seguimiento de Envío Flex
+              </span>
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
+            </div>
+            <h1 className="text-2xl font-black tracking-tight mt-1 flex items-center gap-2">
+              Orden <span className="text-[#3483fa]">#{orderNumber.current}</span>
+            </h1>
+          </div>
+        </div>
+
+        {/* Info badges */}
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 shadow-sm">
+            <span className="text-gray-400 block font-bold uppercase text-[9px]">Código de Seguimiento</span>
+            <span className="font-mono font-bold text-gray-700 dark:text-slate-200">{trackingCode.current}</span>
+          </div>
+          <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 rounded-xl px-4 py-3 shadow-sm flex items-center gap-2">
+            <Shield className="w-5 h-5 text-emerald-500" />
+            <div>
+              <span className="text-emerald-600 dark:text-emerald-400 block font-bold uppercase text-[9px]">Compra Protegida</span>
+              <span className="text-emerald-800 dark:text-emerald-300 font-bold">Garantía Mercado Pago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Grid: Tracking Map (Left 7 cols) & Status Sidebar (Right 5 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        {/* Left Side: Interactive SVG Map Container */}
+        <div className="lg:col-span-8 space-y-4">
+          
+          {/* Map wrapper */}
+          <div className="relative bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden select-none">
+            
+            {/* Map Header / Live Stats HUD */}
+            <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-xl p-4 shadow-lg text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center border border-blue-500/30">
+                  <Truck className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest block">Estado del Repartidor</span>
+                  <span className="text-sm font-bold flex items-center gap-1.5 text-blue-300">
+                    {progress >= 100 ? (
+                      <span className="text-green-400 flex items-center gap-1">¡Entregado con éxito!</span>
+                    ) : progress >= 75 ? (
+                      "Ramiro está a pocas cuadras"
+                    ) : (
+                      "En viaje por Autopista"
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* ETA / Distance Info blocks */}
+              <div className="flex items-center gap-6 divide-x divide-slate-800">
+                <div className="text-right">
+                  <span className="text-[9px] text-slate-400 uppercase font-bold block">Distancia Restante</span>
+                  <span className="text-lg font-black font-mono text-white">
+                    {progress >= 100 ? "0.0" : distanceRemaining} <span className="text-xs text-slate-400">km</span>
+                  </span>
+                </div>
+                <div className="pl-6 text-right">
+                  <span className="text-[9px] text-slate-400 uppercase font-bold block">Tiempo Estimado (ETA)</span>
+                  <span className="text-lg font-black font-mono text-orange-400 flex items-center gap-1">
+                    <Clock className="w-4 h-4 text-orange-400 inline" /> 
+                    {progress >= 100 ? "Llegó" : `~${etaMinutes} min`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Custom SVG Map */}
+            <div className="w-full aspect-video md:aspect-[16/9] min-h-[320px] relative">
+              <svg 
+                viewBox="0 0 800 500" 
+                className="w-full h-full bg-slate-950 transition-all duration-300"
+                style={{ backgroundImage: 'radial-gradient(#1e293b 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+              >
+                {/* 1. Grid lines and decorative streets */}
+                <g stroke="#1e293b" strokeWidth="2" strokeDasharray="4 4" opacity="0.4">
+                  {decorativeRoads.map((road, i) => (
+                    <line key={i} x1={road.x1} y1={road.y1} x2={road.x2} y2={road.y2} />
+                  ))}
+                </g>
+
+                {/* Major avenues / dark grey roads */}
+                <g stroke="#334155" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" opacity="0.6">
+                  <path d="M 50 450 Q 250 350 450 250 T 750 150" fill="none" />
+                  <path d="M 120 400 L 720 120" fill="none" />
+                  <path d="M 100 200 L 700 400" fill="none" />
+                </g>
+                <g stroke="#475569" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" opacity="0.9">
+                  <path d="M 50 450 Q 250 350 450 250 T 750 150" fill="none" />
+                  <path d="M 120 400 L 720 120" fill="none" />
+                </g>
+
+                {/* 2. Actual Route Polyline Layer */}
+                {/* Background glow path */}
+                <path 
+                  d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
+                  fill="none" 
+                  stroke="#3b82f6" 
+                  strokeWidth="6" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  opacity="0.3"
+                  className="blur-xs"
+                />
+                {/* Core route path */}
+                <path 
+                  d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
+                  fill="none" 
+                  stroke="#3483fa" 
+                  strokeWidth="4" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeDasharray="8 6"
+                />
+
+                {/* Highlighted completed route portion */}
+                <path 
+                  d={`M ${routePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`} 
+                  fill="none" 
+                  stroke="#10b981" 
+                  strokeWidth="4" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeDasharray="none"
+                  style={{
+                    strokeDasharray: 2000,
+                    strokeDashoffset: 2000 - (2000 * progress) / 100
+                  }}
+                />
+
+                {/* 3. Checkpoint Markers */}
+                {routePoints.map((point, index) => {
+                  const isCompleted = progress >= (index / (routePoints.length - 1)) * 100;
+                  const isActive = activePhaseIndex === index && progress < 100;
+
+                  return (
+                    <g 
+                      key={index} 
+                      className="cursor-pointer group/node"
+                      onClick={() => setSelectedCheckpoint(index)}
+                    >
+                      {/* Interactive click trigger halo */}
+                      <circle 
+                        cx={point.x} 
+                        cy={point.y} 
+                        r="24" 
+                        fill="transparent" 
+                        className="hover:fill-white/5 transition-colors"
+                      />
+
+                      {/* Ripple halo for active checkpoint */}
+                      {(isActive || (index === 4 && progress >= 100)) && (
+                        <circle 
+                          cx={point.x} 
+                          cy={point.y} 
+                          r="18" 
+                          fill="none" 
+                          stroke={index === 4 ? "#10b981" : "#3483fa"} 
+                          strokeWidth="2" 
+                          className="animate-ping" 
+                          style={{ transformOrigin: `${point.x}px ${point.y}px` }}
+                        />
+                      )}
+
+                      {/* Main marker circle */}
+                      <circle 
+                        cx={point.x} 
+                        cy={point.y} 
+                        r={isActive ? "10" : "8"} 
+                        fill={isCompleted ? (index === 4 ? "#10b981" : "#00a650") : "#1e293b"} 
+                        stroke={isActive ? "#3483fa" : (isCompleted ? "#34d399" : "#475569")} 
+                        strokeWidth="3" 
+                        className="transition-all duration-300 group-hover/node:scale-125"
+                        style={{ transformOrigin: `${point.x}px ${point.y}px` }}
+                      />
+
+                      {/* Text Label popup on hover */}
+                      <g className="opacity-0 group-hover/node:opacity-100 transition-opacity duration-200 pointer-events-none">
+                        <rect 
+                          x={point.x - 75} 
+                          y={point.y - 42} 
+                          width="150" 
+                          height="30" 
+                          rx="6" 
+                          fill="#0f172a" 
+                          stroke="#334155" 
+                          strokeWidth="1"
+                        />
+                        <text 
+                          x={point.x} 
+                          y={point.y - 23} 
+                          fill="#ffffff" 
+                          fontSize="10" 
+                          fontWeight="bold" 
+                          textAnchor="middle"
+                        >
+                          {point.label}
+                        </text>
+                      </g>
+                    </g>
+                  );
+                })}
+
+                {/* 4. Moving Delivery Vehicle (Uber / Mercado Libre style truck) */}
+                {progress < 100 && (
+                  <g 
+                    style={{ 
+                      transform: `translate(${vehiclePos.x}px, ${vehiclePos.y}px)`,
+                      transition: 'transform 0.1s linear'
+                    }}
+                  >
+                    {/* Pulsating radar halo around delivery vehicle */}
+                    <circle cx="0" cy="0" r="28" fill="rgba(52, 131, 250, 0.15)" className="animate-pulse" />
+                    <circle cx="0" cy="0" r="14" fill="#3483fa" className="shadow-lg" />
+                    
+                    {/* Directional arrow/headlight glow */}
+                    <polygon points="0,-6 14,0 0,6" fill="#3483fa" opacity="0.8" style={{ transform: 'rotate(-45deg)' }} />
+
+                    {/* High-fidelity car/bike SVG symbol */}
+                    <g transform="translate(-8, -8) scale(0.7)">
+                      <path 
+                        d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v10h3 M7 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4M17 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4" 
+                        fill="none" 
+                        stroke="#ffffff" 
+                        strokeWidth="2.5" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                    </g>
+                  </g>
+                )}
+
+                {/* 5. Start and End Landmark Labels on Map */}
+                <g transform={`translate(${routePoints[0].x}, ${routePoints[0].y + 24})`}>
+                  <text fill="#64748b" fontSize="9" fontWeight="black" textAnchor="middle" letterSpacing="0.5">ORIGEN: NOVA3D</text>
+                </g>
+                <g transform={`translate(${routePoints[4].x}, ${routePoints[4].y - 20})`}>
+                  <text fill="#10b981" fontSize="9" fontWeight="black" textAnchor="middle" letterSpacing="0.5">DESTINO: TU CASA</text>
+                </g>
+              </svg>
+
+              {/* Map Footer Control Panel (Uber / Player controls) */}
+              <div className="absolute bottom-4 left-4 right-4 z-10 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4 text-white">
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className={cn(
+                      "p-2 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer",
+                      isPlaying ? "bg-amber-500 hover:bg-amber-400 text-slate-950" : "bg-[#3483fa] hover:bg-blue-600 text-white"
+                    )}
+                  >
+                    {isPlaying ? <Pause className="w-3.5 h-3.5 stroke-[3]" /> : <Play className="w-3.5 h-3.5 stroke-[3]" />}
+                    {isPlaying ? "Pausar Tracker" : "Reanudar Tracker"}
+                  </button>
+
+                  <button 
+                    onClick={handleResetSimulation}
+                    className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Reiniciar Simulación de Envío"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Scrubber timeline slider */}
+                <div className="flex-grow max-w-xs md:max-w-md flex items-center gap-3">
+                  <span className="text-[10px] font-mono text-slate-400">Progreso:</span>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={progress}
+                    onChange={(e) => {
+                      setProgress(parseFloat(e.target.value));
+                      setIsPlaying(false); // Stop auto play when scrubbing
+                    }}
+                    className="flex-grow h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  />
+                  <span className="text-[10px] font-mono text-blue-400 font-bold">{Math.round(progress)}%</span>
+                </div>
+
+                {/* Speed Multipliers */}
+                <div className="flex items-center gap-1.5 text-[10px] border border-slate-800 rounded-lg p-0.5">
+                  {[1, 2, 5].map((speed) => (
+                    <button
+                      key={speed}
+                      onClick={() => setSimulationSpeed(speed)}
+                      className={cn(
+                        "px-2 py-1 rounded transition-colors font-mono font-bold cursor-pointer",
+                        simulationSpeed === speed ? "bg-slate-800 text-orange-400" : "text-slate-500 hover:text-white"
+                      )}
+                    >
+                      {speed}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Dynamic Checkpoint Detail Block */}
+          {selectedCheckpoint !== null && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-5 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200/60 dark:border-slate-700/60 shadow-md flex gap-4 items-start"
+            >
+              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-slate-900 flex items-center justify-center text-blue-500 border border-blue-100 dark:border-slate-800 shrink-0 mt-0.5">
+                <MapIcon className="w-5 h-5" />
+              </div>
+              <div className="flex-grow">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-gray-800 dark:text-white">
+                    Punto de Control {selectedCheckpoint + 1}: {routePoints[selectedCheckpoint].label}
+                  </h4>
+                  <button 
+                    onClick={() => setSelectedCheckpoint(null)}
+                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-white font-bold"
+                  >
+                    Cerrar Detalle
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">{routePoints[selectedCheckpoint].sub}</p>
+                <p className="text-xs text-gray-600 dark:text-slate-300 mt-2.5 leading-relaxed bg-gray-50 dark:bg-slate-900/50 p-3 rounded-lg border border-gray-100 dark:border-slate-800/40">
+                  {routePoints[selectedCheckpoint].info}
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Interactive Live Log Ticker */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-white shadow-md">
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 bg-blue-400 rounded-full animate-ping" />
+              Log de Eventos en Tiempo Real (GPS)
+            </h3>
+            <div className="space-y-3 font-mono text-xs max-h-36 overflow-y-auto divide-y divide-slate-800/60">
+              <div className="pt-2.5 first:pt-0 flex justify-between gap-4 text-slate-300">
+                <span>[07:31 AM] Fábrica Nova3D: Producto despachado y empaquetado.</span>
+                <span className="text-green-400">✓ OK</span>
+              </div>
+              {progress >= 25 && (
+                <div className="pt-2.5 flex justify-between gap-4 text-slate-300">
+                  <span>[07:38 AM] GPS Repartidor: Tránsito fluido cruzando Av. General Paz.</span>
+                  <span className="text-green-400">✓ OK</span>
+                </div>
+              )}
+              {progress >= 50 && (
+                <div className="pt-2.5 flex justify-between gap-4 text-slate-300">
+                  <span>[07:44 AM] GPS Repartidor: Entrando en plataforma de distribución local de cercanía.</span>
+                  <span className="text-blue-400">● EN TRÁNSITO</span>
+                </div>
+              )}
+              {progress >= 75 && (
+                <div className="pt-2.5 flex justify-between gap-4 text-slate-300">
+                  <span>[07:51 AM] Telemetría: Ramiro está a menos de 5 cuadras del domicilio.</span>
+                  <span className="text-amber-400 animate-pulse">● PRÓXIMO</span>
+                </div>
+              )}
+              {progress >= 100 && (
+                <div className="pt-2.5 flex justify-between gap-4 text-slate-300">
+                  <span>[07:58 AM] Entregador: Entrega completada y firma digital autorizada.</span>
+                  <span className="text-green-400 font-bold">✓ ENTREGADO</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side: Step-by-Step Milestones & Driver Card (5 cols) */}
+        <div className="lg:col-span-4 space-y-6">
+          
+          {/* Active Product Preview Card */}
+          <div className="bg-white dark:bg-slate-800 border border-gray-200/60 dark:border-slate-700/60 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+            <img 
+              src={activeProduct.images?.[0]} 
+              alt={activeProduct.name} 
+              className="w-16 h-16 rounded-xl object-contain bg-white border border-gray-100 p-1 shrink-0"
+              referrerPolicy="no-referrer"
+            />
+            <div className="min-w-0 flex-grow">
+              <span className="text-[10px] uppercase font-mono font-black text-[#3483fa] tracking-wider block">Producto en Camino</span>
+              <h3 className="font-bold text-sm truncate text-gray-900 dark:text-white mt-0.5">{activeProduct.name}</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                Cant: <span className="font-bold">{quantity} u.</span> | Total: <span className="font-bold text-gray-900 dark:text-white">$ {((activeProduct.price || 0) * quantity).toLocaleString('es-AR')}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Delivery Phase Vertical Tracker */}
+          <div className="bg-white dark:bg-slate-800 border border-gray-200/60 dark:border-slate-700/60 rounded-2xl p-6 shadow-sm">
+            <h3 className="text-sm font-black text-gray-800 dark:text-white mb-6 uppercase tracking-wider">
+              Estado del Envío
+            </h3>
+
+            <div className="space-y-6 relative before:absolute before:bottom-2 before:top-2 before:left-3 before:w-[2px] before:bg-gray-100 dark:before:bg-slate-700">
+              
+              {/* Step 1 */}
+              <div className="flex gap-4 relative">
+                <div className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center border-4 border-white dark:border-slate-800 shrink-0 z-10 shadow-xs">
+                  <Check className="w-3 h-3 stroke-[3]" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-gray-900 dark:text-white leading-tight">Pago Acreditado</h4>
+                  <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-1 leading-normal">
+                    Mercado Pago confirmó el cobro. Factura enviada por correo electrónico.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex gap-4 relative">
+                <div className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center border-4 border-white dark:border-slate-800 shrink-0 z-10 shadow-xs",
+                  progress >= 10 ? "bg-green-500 text-white" : "bg-gray-200 dark:bg-slate-700 text-gray-400"
+                )}>
+                  {progress >= 10 ? <Check className="w-3 h-3 stroke-[3]" /> : <span className="w-1.5 h-1.5 bg-gray-400 rounded-full" />}
+                </div>
+                <div>
+                  <h4 className={cn(
+                    "font-bold text-xs leading-tight",
+                    progress >= 10 ? "text-gray-900 dark:text-white" : "text-gray-400"
+                  )}>Preparación y Diseño 3D</h4>
+                  <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-1 leading-normal">
+                    Granja automatizada completó la impresión y control de calidad.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex gap-4 relative">
+                <div className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center border-4 border-white dark:border-slate-800 shrink-0 z-10 shadow-xs transition-colors duration-300",
+                  progress >= 25 && progress < 100 ? "bg-blue-500 text-white animate-pulse" : progress >= 100 ? "bg-green-500 text-white" : "bg-gray-200 dark:bg-slate-700 text-gray-400"
+                )}>
+                  {progress >= 100 ? <Check className="w-3 h-3 stroke-[3]" /> : <Truck className="w-3 h-3" />}
+                </div>
+                <div>
+                  <h4 className={cn(
+                    "font-bold text-xs leading-tight flex items-center gap-1.5",
+                    progress >= 25 ? "text-gray-900 dark:text-white" : "text-gray-400"
+                  )}>En Viaje de Reparto</h4>
+                  <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-1 leading-normal">
+                    El transportista asignado está yendo hacia tu domicilio. Segui el GPS en vivo.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div className="flex gap-4 relative">
+                <div className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center border-4 border-white dark:border-slate-800 shrink-0 z-10 shadow-xs transition-colors duration-300",
+                  progress >= 100 ? "bg-green-500 text-white" : "bg-gray-200 dark:bg-slate-700 text-gray-400"
+                )}>
+                  <Check className="w-3 h-3 stroke-[3]" />
+                </div>
+                <div>
+                  <h4 className={cn(
+                    "font-bold text-xs leading-tight",
+                    progress >= 100 ? "text-gray-900 dark:text-white" : "text-gray-400"
+                  )}>Entregado en Destino</h4>
+                  <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-1 leading-normal">
+                    Firma digital efectuada en {locationText}.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Driver details Card (Uber-like driver profile) */}
+          <div className="bg-white dark:bg-slate-800 border border-gray-200/60 dark:border-slate-700/60 rounded-2xl p-6 shadow-sm space-y-4">
+            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+              Tu Repartidor Asignado
+            </h3>
+
+            <div className="flex items-center gap-4">
+              <img 
+                src={driver.avatar} 
+                alt={driver.name} 
+                className="w-14 h-14 rounded-full object-cover border border-gray-200 shrink-0"
+              />
+              <div>
+                <h4 className="font-bold text-sm text-gray-900 dark:text-white">{driver.name}</h4>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="flex items-center gap-0.5 text-xs text-amber-500 font-bold">
+                    <Star className="w-3.5 h-3.5 fill-amber-500" /> {driver.rating}
+                  </span>
+                  <span className="text-[10px] text-gray-400">({driver.reviewsCount} envíos)</span>
+                </div>
+                <span className="text-[10px] bg-blue-50 dark:bg-slate-900 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded font-black mt-1.5 inline-block uppercase tracking-wider">
+                  Repartidor Flex VIP
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-3.5 border border-gray-100 dark:border-slate-800/60 text-xs space-y-1.5">
+              <p className="text-gray-500 dark:text-slate-400">
+                Vehículo: <span className="font-bold text-gray-900 dark:text-white">{driver.vehicle}</span>
+              </p>
+              <p className="text-gray-500 dark:text-slate-400">
+                Patente registrada: <span className="font-bold text-gray-900 dark:text-white">{driver.plate}</span>
+              </p>
+            </div>
+
+            {/* Call / WhatsApp actions */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <a 
+                href={`tel:${driver.phone}`}
+                className="py-2.5 border border-gray-200 hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-700/50 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-gray-700 dark:text-slate-200 transition-colors"
+              >
+                <Phone className="w-3.5 h-3.5" /> Llamar
+              </a>
+              <a 
+                href={`https://wa.me/5491144445555?text=Hola%20Ramiro,%20estoy%20esperando%20el%20pedido%20de%20Nova3D%20`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2.5 bg-[#25d366] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#20ba5a] transition-colors"
+              >
+                <MessageSquare className="w-3.5 h-3.5" /> Chatear
+              </a>
+            </div>
+
+            <p className="text-[10px] text-gray-400 italic text-center pt-2">
+              * Para tu seguridad, el repartidor está validado por las políticas de entrega sin contacto de ML3D.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

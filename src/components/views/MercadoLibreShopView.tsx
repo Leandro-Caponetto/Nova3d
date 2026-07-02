@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Product } from '../../types';
+import { ProductTrackingView } from './ProductTrackingView';
 
 interface MercadoLibreShopViewProps {
   products: Product[];
@@ -43,6 +44,7 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
   const [postalCode, setPostalCode] = useState('1425');
   const [isEditingPostal, setIsEditingPostal] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activeSubSection, setActiveSubSection] = useState<'store' | 'tracking'>('store');
   
   // Favorites & Share States
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -268,7 +270,7 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
           {/* Logo & Search Area */}
           <div className="flex items-center gap-6 w-full md:w-auto flex-grow">
             {/* Custom ML-style hand-shake badge/branding in custom orange */}
-            <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => { setSelectedProduct(null); setActiveCategory('all'); setSearchQuery(''); }}>
+            <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => { setSelectedProduct(null); setActiveCategory('all'); setSearchQuery(''); setActiveSubSection('store'); }}>
               <div className="w-12 h-8 bg-orange-500 rounded flex items-center justify-center font-black italic text-white text-xs select-none shadow-md">
                 ML<span className="text-white">3D</span>
               </div>
@@ -284,7 +286,7 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
                 type="text"
                 placeholder="Buscar productos, marcas y más..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setActiveSubSection('store'); }}
                 className="w-full bg-slate-800/90 text-sm text-white pl-4 pr-12 py-2.5 rounded-md border border-slate-700/80 focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-400 focus:border-transparent transition-all"
               />
               <button className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 p-1">
@@ -321,7 +323,7 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
                 {categories.map((cat) => (
                   <button 
                     key={cat}
-                    onClick={() => { setSelectedProduct(null); setActiveCategory(cat); }}
+                    onClick={() => { setSelectedProduct(null); setActiveCategory(cat); setActiveSubSection('store'); }}
                     className={cn(
                       "hover:text-white transition-colors capitalize pb-0.5",
                       activeCategory === cat ? "border-b-2 border-orange-500 font-bold text-white" : ""
@@ -333,11 +335,30 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
               </div>
             </div>
 
-            <div className="flex items-center gap-6 text-[11px] text-slate-400">
-              <span className="hover:text-white cursor-pointer transition-colors">Ofertas de la Semana</span>
-              <span className="hover:text-white cursor-pointer transition-colors">Historial</span>
-              <span className="hover:text-white cursor-pointer transition-colors">Vender</span>
-              <span className="hover:text-white cursor-pointer transition-colors">Ayuda / Soporte</span>
+            <div className="flex items-center gap-5 text-[11px] text-slate-400">
+              <button 
+                onClick={() => setActiveSubSection('store')}
+                className={cn(
+                  "hover:text-white cursor-pointer transition-colors font-bold",
+                  activeSubSection === 'store' ? "text-orange-500 font-black" : "text-slate-400"
+                )}
+              >
+                Tienda Catalogo
+              </button>
+              
+              <button 
+                onClick={() => setActiveSubSection('tracking')}
+                className={cn(
+                  "hover:text-white cursor-pointer transition-all font-bold flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900 border",
+                  activeSubSection === 'tracking' ? "text-blue-400 border-blue-500/30 bg-blue-500/10" : "text-slate-300 border-slate-800"
+                )}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                Seguimiento en Vivo
+              </button>
+              
+              <span className="hover:text-white cursor-pointer transition-colors hidden lg:inline">Ofertas</span>
+              <span className="hover:text-white cursor-pointer transition-colors hidden lg:inline">Ayuda</span>
             </div>
           </div>
         </div>
@@ -384,22 +405,40 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
 
       <div className="max-w-6xl mx-auto px-4 mt-6">
         
-        {/* Breadcrumb row */}
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-6">
-          <span className="hover:underline cursor-pointer" onClick={() => setSelectedProduct(null)}>Tienda ML3D</span>
-          <ChevronRight className="w-3 h-3 text-gray-400" />
-          <span className="capitalize">{activeCategory === 'all' ? 'Catálogo General' : activeCategory}</span>
-          {selectedProduct && (
-            <>
-              <ChevronRight className="w-3 h-3 text-gray-400" />
-              <span className="font-bold text-gray-700 truncate max-w-[200px]">{selectedProduct.name}</span>
-            </>
-          )}
-        </div>
+        {/* Breadcrumb row (only in store sub-section) */}
+        {activeSubSection === 'store' && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-6">
+            <span className="hover:underline cursor-pointer" onClick={() => setSelectedProduct(null)}>Tienda ML3D</span>
+            <ChevronRight className="w-3 h-3 text-gray-400" />
+            <span className="capitalize">{activeCategory === 'all' ? 'Catálogo General' : activeCategory}</span>
+            {selectedProduct && (
+              <>
+                <ChevronRight className="w-3 h-3 text-gray-400" />
+                <span className="font-bold text-gray-700 truncate max-w-[200px]">{selectedProduct.name}</span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* 2. MAIN SHOP GRID OR PRODUCT DETAILS VIEW */}
         <AnimatePresence mode="wait">
-          {!selectedProduct ? (
+          {activeSubSection === 'tracking' ? (
+            <motion.div
+              key="tracking-view"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+            >
+              <ProductTrackingView 
+                product={selectedProduct}
+                quantity={quantity}
+                locationText={locationText}
+                postalCode={postalCode}
+                theme={theme}
+                onBackToStore={() => setActiveSubSection('store')}
+              />
+            </motion.div>
+          ) : !selectedProduct ? (
             <motion.div 
               key="list-view"
               initial={{ opacity: 0 }}
@@ -967,12 +1006,23 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
                     <p><span className="text-gray-400">MONTO:</span> ARS $ {(selectedProduct ? selectedProduct.price * quantity : 0).toLocaleString()}</p>
                     <p><span className="text-gray-400">COMPRADOR:</span> {user?.email || 'anonimo@example.com'}</p>
                   </div>
-                  <button 
-                    onClick={() => setShowMpModal(false)}
-                    className="w-full bg-[#3483fa] text-white font-bold text-sm py-3 rounded hover:bg-[#2968c8]"
-                  >
-                    Volver a la tienda
-                  </button>
+                  <div className="space-y-2">
+                    <button 
+                      onClick={() => {
+                        setShowMpModal(false);
+                        setActiveSubSection('tracking');
+                      }}
+                      className="w-full bg-[#00a650] hover:bg-[#008f43] text-white font-bold text-sm py-3.5 rounded-lg transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer animate-pulse"
+                    >
+                      <Truck className="w-5 h-5 shrink-0" /> Hacer Seguimiento en Vivo
+                    </button>
+                    <button 
+                      onClick={() => setShowMpModal(false)}
+                      className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 rounded-lg transition-colors cursor-pointer"
+                    >
+                      Volver a la tienda
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-6">
