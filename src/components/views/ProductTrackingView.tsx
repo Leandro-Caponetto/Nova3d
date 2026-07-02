@@ -80,20 +80,18 @@ function LeafletMapComponent({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Create map instance - set default zoom to 15 for excellent street name/GPS detail
+    // Create map instance - set default zoom to 14 for excellent street name/GPS detail and wider area view
     const map = L.map(containerRef.current, {
       center: [center.lat, center.lng],
-      zoom: 15,
+      zoom: 14,
       zoomControl: true,
       attributionControl: false,
     });
 
     mapRef.current = map;
 
-    // Premium CartoDB tiles that fit our dark/light slate design beautifully
-    const tileUrl = theme === 'dark'
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    // Standard OpenStreetMap tiles for ultimate GPS-like street-by-street clarity with all names and intersections
+    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
     L.tileLayer(tileUrl, {
       maxZoom: 19,
@@ -870,8 +868,54 @@ export function ProductTrackingView({
         
         {/* Left Side: Interactive SVG Map Container */}
         <div className="lg:col-span-8 space-y-4">
+          {/* Selector de Tipo de Mapa - ¡Muy Prominente para el Usuario! */}
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-1.5 rounded-2xl shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-20">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 pl-3 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Seleccionar Mapa de Navegación:
+            </span>
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => setMapViewMode('real')}
+                className={cn(
+                  "px-3 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer border",
+                  mapViewMode === 'real'
+                    ? "bg-emerald-600 border-emerald-500 text-white shadow-emerald-900/10"
+                    : "bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                )}
+              >
+                <MapIcon className="w-4 h-4 text-emerald-500" />
+                🗺️ Mapa Real (Gratis)
+              </button>
+              <button
+                onClick={() => setMapViewMode('svg')}
+                className={cn(
+                  "px-3 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer border",
+                  mapViewMode === 'svg'
+                    ? "bg-blue-600 border-blue-500 text-white shadow-blue-900/10"
+                    : "bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                )}
+              >
+                <Sparkles className="w-4 h-4 text-blue-400" />
+                🎨 Mapa Ilustrado
+              </button>
+              <button
+                onClick={() => setMapViewMode('google')}
+                className={cn(
+                  "px-3 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer border",
+                  mapViewMode === 'google'
+                    ? "bg-amber-500 border-amber-600 text-slate-950 shadow-amber-900/10"
+                    : "bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                )}
+              >
+                <Navigation className="w-4 h-4 text-orange-500 rotate-45" />
+                📍 Google Maps
+              </button>
+            </div>
+          </div>
+
           {/* Map wrapper */}
-          <div className="relative bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden select-none" style={{ height: '480px' }}>
+          <div className="relative bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden select-none" style={{ height: '620px' }}>
             
             {/* Map Header / Live Stats HUD */}
             <div className="absolute top-4 left-4 right-4 z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl p-4 shadow-xl text-white">
@@ -1018,7 +1062,7 @@ export function ProductTrackingView({
                     </Map>
 
                     {/* Floating HUD over map */}
-                    <div className="absolute bottom-18 right-4 z-10 flex flex-col gap-2">
+                    <div className="absolute bottom-20 right-4 z-10 flex flex-col gap-2">
                       {!followDriver && (
                         <button
                           onClick={() => setFollowDriver(true)}
@@ -1103,7 +1147,7 @@ export function ProductTrackingView({
                 />
                 
                 {/* Float controls on Leaflet */}
-                <div className="absolute bottom-18 right-4 z-10 flex flex-col gap-2">
+                <div className="absolute bottom-20 right-4 z-10 flex flex-col gap-2">
                   {!followDriver && (
                     <button
                       onClick={() => setFollowDriver(true)}
@@ -1312,7 +1356,7 @@ export function ProductTrackingView({
                 </svg>
 
                 {/* Floating controls on SVG */}
-                <div className="absolute bottom-18 right-4 z-10">
+                <div className="absolute bottom-20 right-4 z-10">
                   <div className="flex gap-2 bg-slate-900/95 backdrop-blur-md border border-slate-800 p-1 rounded-lg shadow-2xl">
                     <button
                       onClick={() => setMapViewMode('real')}
