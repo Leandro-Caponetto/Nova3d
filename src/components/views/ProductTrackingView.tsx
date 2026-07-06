@@ -470,6 +470,11 @@ interface ProductTrackingViewProps {
   postalCode: string;
   onBackToStore: () => void;
   theme: 'dark' | 'light';
+  profileAddress?: string;
+  profilePostalCode?: string;
+  profileFullName?: string;
+  profilePhone?: string;
+  onUpdateProfile?: (data: { address?: string; postalCode?: string; fullName?: string; phone?: string }) => void;
 }
 
 export function ProductTrackingView({
@@ -478,7 +483,12 @@ export function ProductTrackingView({
   locationText,
   postalCode,
   onBackToStore,
-  theme
+  theme,
+  profileAddress = '',
+  profilePostalCode = '',
+  profileFullName = '',
+  profilePhone = '',
+  onUpdateProfile
 }: ProductTrackingViewProps) {
   // Use either the purchased product or a high-fidelity default
   const activeProduct = product || {
@@ -502,11 +512,67 @@ export function ProductTrackingView({
   const [simulationSpeed, setSimulationSpeed] = useState(1); // multiplier
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<number | null>(null);
 
+  // Address editing states in tracking view
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [tempName, setTempName] = useState(profileFullName);
+  const [tempAddress, setTempAddress] = useState(profileAddress || locationText);
+  const [tempPostal, setTempPostal] = useState(profilePostalCode || postalCode);
+  const [tempPhone, setTempPhone] = useState(profilePhone);
+
+  // Sync edits when states change
+  useEffect(() => {
+    setTempName(profileFullName);
+    setTempAddress(profileAddress || locationText);
+    setTempPostal(profilePostalCode || postalCode);
+    setTempPhone(profilePhone);
+  }, [profileFullName, profileAddress, locationText, profilePostalCode, postalCode, profilePhone]);
+
   // Map View Mode: 'real' (Leaflet OpenStreetMap), 'google' (Google Maps - requires key), 'svg' (Stylized Mock SVG)
   const [mapViewMode, setMapViewMode] = useState<'real' | 'google' | 'svg'>(
     hasValidKey ? 'google' : 'real'
   );
   const [followDriver, setFollowDriver] = useState(true);
+
+  // Dynamic deterministic target coordinates based on locationText / postalCode to dynamically update maps in real time!
+  const targetCoords = useMemo(() => {
+    const cleanAddress = (locationText || '').toLowerCase();
+    const cleanPostal = (postalCode || '').toLowerCase();
+    
+    if (cleanAddress.includes('córdoba') || cleanPostal.startsWith('5')) {
+      return { lat: -31.4135, lng: -64.1811 };
+    }
+    if (cleanAddress.includes('rosario') || cleanAddress.includes('santa fe') || cleanPostal.startsWith('2')) {
+      return { lat: -32.9468, lng: -60.6393 };
+    }
+    if (cleanAddress.includes('mendoza') || cleanPostal.startsWith('4')) {
+      return { lat: -32.8895, lng: -68.8458 };
+    }
+    if (cleanAddress.includes('la plata') || cleanPostal.startsWith('19')) {
+      return { lat: -34.9214, lng: -57.9545 };
+    }
+    if (cleanAddress.includes('tigre')) {
+      return { lat: -34.4251, lng: -58.5796 };
+    }
+    if (cleanAddress.includes('palermo')) {
+      return { lat: -34.5889, lng: -58.4306 };
+    }
+    if (cleanAddress.includes('belgrano')) {
+      return { lat: -34.5621, lng: -58.4563 };
+    }
+    
+    // Hash-based deterministic coordinate generation so that any custom address typed moves the marker to a unique real street
+    let hash = 0;
+    for (let i = 0; i < cleanAddress.length; i++) {
+      hash = cleanAddress.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const latOffset = ((hash % 100) / 1000) * 0.15;
+    const lngOffset = (((hash >> 8) % 100) / 1000) * 0.15;
+    
+    return {
+      lat: -34.5200 + latOffset,
+      lng: -58.4800 + lngOffset
+    };
+  }, [locationText, postalCode]);
 
   // Real geographic coordinates for Google Maps (Buenos Aires, Argentina)
   const geoCheckpoints = useMemo(() => [
@@ -514,8 +580,8 @@ export function ProductTrackingView({
     { lat: -34.5612, lng: -58.4563, label: "Centro de Clasificación Flex", sub: "Belgrano, CABA", emoji: "📦" },
     { lat: -34.5385, lng: -58.4751, label: "Av. General Paz Checkpoint", sub: "Límite CABA", emoji: "🛣️" },
     { lat: -34.5106, lng: -58.4984, label: "Distribuidora Zona Norte", sub: "Olivos", emoji: "🏪" },
-    { lat: -34.4815, lng: -58.5226, label: "Tu Domicilio", sub: locationText || "San Isidro, GBA", emoji: "🏠" }
-  ], [locationText]);
+    { lat: targetCoords.lat, lng: targetCoords.lng, label: "Tu Domicilio", sub: locationText || "San Isidro, GBA", emoji: "🏠" }
+  ], [targetCoords, locationText]);
 
   // Keep track of downloaded real-world street points and step info (OSRM public keyless API)
   const [osrmRoutePoints, setOsrmRoutePoints] = useState<Array<{ lat: number; lng: number }>>([]);
@@ -1521,6 +1587,101 @@ export function ProductTrackingView({
                 Cant: <span className="font-bold">{quantity} u.</span> | Total: <span className="font-bold text-gray-900 dark:text-white">$ {((activeProduct.price || 0) * quantity).toLocaleString('es-AR')}</span>
               </p>
             </div>
+          </div>
+
+          {/* Live Delivery Settings / User Address Changer Card */}
+          <div className="bg-white dark:bg-slate-800 border border-gray-200/60 dark:border-slate-700/60 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex justify-between items-center border-b border-gray-100 dark:border-slate-700/50 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="bg-orange-500/10 text-orange-500 p-1.5 rounded-lg">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <h4 className="font-black text-[11px] uppercase tracking-wider text-gray-800 dark:text-gray-100">Dirección de Destino</h4>
+              </div>
+              <button 
+                onClick={() => setIsEditingAddress(!isEditingAddress)}
+                className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+              >
+                {isEditingAddress ? 'Cancelar' : 'Cambiar Dirección'}
+              </button>
+            </div>
+
+            {!isEditingAddress ? (
+              <div className="text-xs text-gray-600 dark:text-slate-300 space-y-1">
+                <p className="font-bold text-gray-800 dark:text-white flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  {profileFullName || tempName || 'Cliente Nova3D'}
+                </p>
+                <p className="pl-3 text-gray-700 dark:text-slate-300 font-medium">{profileAddress || locationText || 'Palermo, CABA'}</p>
+                <p className="pl-3 text-[11px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                  CP: {profilePostalCode || postalCode || '1425'} | Tel: {profilePhone || tempPhone || '+54 9 11 5555-1234'}
+                </p>
+                <div className="pt-2">
+                  <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-widest bg-emerald-500/10 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg">
+                    <Sparkles className="w-3 h-3 animate-pulse" /> Ruta en tiempo real recalculada
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3.5 pt-1">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 block">Nombre del Destinatario</label>
+                  <input 
+                    type="text" 
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20"
+                    placeholder="Ej: Juan Pérez"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 block">Calle, Altura y Ciudad</label>
+                  <input 
+                    type="text" 
+                    value={tempAddress}
+                    onChange={(e) => setTempAddress(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20"
+                    placeholder="Ej: Av. de Mayo 800, CABA"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 block">Cód. Postal</label>
+                    <input 
+                      type="text" 
+                      value={tempPostal}
+                      onChange={(e) => setTempPostal(e.target.value.replace(/\D/g, '').substring(0, 4))}
+                      className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20"
+                      placeholder="1425"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 block">Teléfono</label>
+                    <input 
+                      type="text" 
+                      value={tempPhone}
+                      onChange={(e) => setTempPhone(e.target.value)}
+                      className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20"
+                      placeholder="Ej: +54 9 11 5555-1234"
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    onUpdateProfile?.({
+                      fullName: tempName,
+                      address: tempAddress,
+                      postalCode: tempPostal,
+                      phone: tempPhone
+                    });
+                    setIsEditingAddress(false);
+                  }}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" /> Guardar y Actualizar Mapa
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Email Invoice Simulation & Verification Widget */}

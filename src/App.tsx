@@ -55,6 +55,53 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
 
+  // User profile and shipping settings
+  const [profileAddress, setProfileAddress] = useState(() => {
+    return localStorage.getItem('nova3d_user_address') || 'Calle Falsa 123, Palermo, Capital Federal';
+  });
+  const [profilePostalCode, setProfilePostalCode] = useState(() => {
+    return localStorage.getItem('nova3d_user_postal_code') || '1425';
+  });
+  const [profileFullName, setProfileFullName] = useState(() => {
+    return localStorage.getItem('nova3d_user_full_name') || '';
+  });
+  const [profilePhone, setProfilePhone] = useState(() => {
+    return localStorage.getItem('nova3d_user_phone') || '+54 9 11 5555-1234';
+  });
+
+  const updateProfileData = async (data: { address?: string; postalCode?: string; fullName?: string; phone?: string }) => {
+    if (data.address !== undefined) {
+      setProfileAddress(data.address);
+      localStorage.setItem('nova3d_user_address', data.address);
+    }
+    if (data.postalCode !== undefined) {
+      setProfilePostalCode(data.postalCode);
+      localStorage.setItem('nova3d_user_postal_code', data.postalCode);
+    }
+    if (data.fullName !== undefined) {
+      setProfileFullName(data.fullName);
+      localStorage.setItem('nova3d_user_full_name', data.fullName);
+    }
+    if (data.phone !== undefined) {
+      setProfilePhone(data.phone);
+      localStorage.setItem('nova3d_user_phone', data.phone);
+    }
+
+    // Attempt to sync with Supabase profiles table if logged in
+    if (user) {
+      try {
+        await supabase.from('profiles').update({
+          full_name: data.fullName !== undefined ? data.fullName : profileFullName,
+          address: data.address !== undefined ? data.address : profileAddress,
+          postal_code: data.postalCode !== undefined ? data.postalCode : profilePostalCode,
+          phone: data.phone !== undefined ? data.phone : profilePhone,
+        }).eq('id', user.id);
+      } catch (err) {
+        console.error("Failed to sync profile with Supabase:", err);
+      }
+    }
+  };
+
   const fetchProfile = async (userId: string, userEmail?: string, metadata?: any) => {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
     
@@ -67,9 +114,33 @@ export default function App() {
         role: 'user',
         last_login: new Date().toISOString()
       }).select().single();
-      if (newProfile) setProfile(newProfile);
+      if (newProfile) {
+        setProfile(newProfile);
+        if (newProfile.full_name) {
+          setProfileFullName(newProfile.full_name);
+          localStorage.setItem('nova3d_user_full_name', newProfile.full_name);
+        }
+      }
     } else if (data) {
       setProfile(data);
+      // Synchronize state with data from Supabase if columns are available
+      if (data.address) {
+        setProfileAddress(data.address);
+        localStorage.setItem('nova3d_user_address', data.address);
+      }
+      if (data.postal_code) {
+        setProfilePostalCode(data.postal_code);
+        localStorage.setItem('nova3d_user_postal_code', data.postal_code);
+      }
+      if (data.phone) {
+        setProfilePhone(data.phone);
+        localStorage.setItem('nova3d_user_phone', data.phone);
+      }
+      if (data.full_name) {
+        setProfileFullName(data.full_name);
+        localStorage.setItem('nova3d_user_full_name', data.full_name);
+      }
+
       // Update last login
       await supabase.from('profiles').update({ last_login: new Date().toISOString() }).eq('id', userId);
     }
@@ -198,7 +269,21 @@ export default function App() {
               />
             )}
             {currentTab === 'gallery' && <GalleryView key="gallery" products={products} addToCart={addToCart} t={t} theme={theme} onWhatsApp={setWsProduct} searchQuery={searchQuery} setSearchQuery={setSearchQuery} user={user} />}
-            {currentTab === 'shop' && <MercadoLibreShopView key="shop" products={products} addToCart={addToCart} theme={theme} t={t} user={user} />}
+            {currentTab === 'shop' && (
+              <MercadoLibreShopView 
+                key="shop" 
+                products={products} 
+                addToCart={addToCart} 
+                theme={theme} 
+                t={t} 
+                user={user} 
+                profileAddress={profileAddress}
+                profilePostalCode={profilePostalCode}
+                profileFullName={profileFullName}
+                profilePhone={profilePhone}
+                onUpdateProfile={updateProfileData}
+              />
+            )}
             {currentTab === 'community' && <CommunityView key="community" theme={theme} t={t} user={user} />}
             {currentTab === 'quote' && <QuoteView key="quote" products={products} addToCart={addToCart} t={t} theme={theme} />}
             {currentTab === 'cart' && <CartView key="cart" cart={cart} remove={removeFromCart} products={products} t={t} theme={theme} />}

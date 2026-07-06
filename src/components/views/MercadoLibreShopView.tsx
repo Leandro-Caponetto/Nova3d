@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, MapPin, Truck, ChevronRight, Star, Heart, Share2, 
   Shield, CreditCard, Sparkles, MessageSquare, Plus, Minus, X, Check,
-  Store, AlertCircle, ShoppingBag, Eye, RefreshCw, Handshake
+  Store, AlertCircle, ShoppingBag, Eye, RefreshCw, Handshake, Settings
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Product } from '../../types';
@@ -15,6 +15,11 @@ interface MercadoLibreShopViewProps {
   theme: 'dark' | 'light';
   t: any;
   user: any;
+  profileAddress?: string;
+  profilePostalCode?: string;
+  profileFullName?: string;
+  profilePhone?: string;
+  onUpdateProfile?: (data: { address?: string; postalCode?: string; fullName?: string; phone?: string }) => void;
 }
 
 const unpackMetadata = (fullDesc: string) => {
@@ -36,17 +41,60 @@ const unpackMetadata = (fullDesc: string) => {
   return { desc: fullDesc || '', mpLink: '', disc: 10, freeShip: true };
 };
 
-export function MercadoLibreShopView({ products, addToCart, theme, t, user }: MercadoLibreShopViewProps) {
+export function MercadoLibreShopView({ 
+  products, 
+  addToCart, 
+  theme, 
+  t, 
+  user,
+  profileAddress = 'Calle Falsa 123, Palermo, Capital Federal',
+  profilePostalCode = '1425',
+  profileFullName = '',
+  profilePhone = '+54 9 11 5555-1234',
+  onUpdateProfile
+}: MercadoLibreShopViewProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [currentImgIdx, setCurrentImgIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [postalCode, setPostalCode] = useState('1425');
+  const [postalCode, setPostalCode] = useState(profilePostalCode);
   const [isEditingPostal, setIsEditingPostal] = useState(false);
+  const [editName, setEditName] = useState(profileFullName);
+  const [editAddress, setEditAddress] = useState(profileAddress);
+  const [editPhone, setEditPhone] = useState(profilePhone);
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSubSection, setActiveSubSection] = useState<'store' | 'tracking'>('store');
   const [checkoutEmail, setCheckoutEmail] = useState(user?.email || '');
-  const [checkoutAddress, setCheckoutAddress] = useState('');
+  const [checkoutAddress, setCheckoutAddress] = useState(profileAddress);
+
+  // Sync state if props change
+  React.useEffect(() => {
+    if (profilePostalCode) setPostalCode(profilePostalCode);
+  }, [profilePostalCode]);
+
+  React.useEffect(() => {
+    if (profileAddress) {
+      setCheckoutAddress(profileAddress);
+      setEditAddress(profileAddress);
+    }
+  }, [profileAddress]);
+
+  React.useEffect(() => {
+    if (profileFullName) setEditName(profileFullName);
+  }, [profileFullName]);
+
+  React.useEffect(() => {
+    if (profilePhone) setEditPhone(profilePhone);
+  }, [profilePhone]);
+
+  // Sync edits when modal opens
+  React.useEffect(() => {
+    if (isEditingPostal) {
+      setEditName(profileFullName);
+      setEditAddress(profileAddress);
+      setEditPhone(profilePhone);
+    }
+  }, [isEditingPostal, profileFullName, profileAddress, profilePhone]);
   
   // Favorites & Share States
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -132,12 +180,8 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
 
   // Postal code locations mapper
   const locationText = useMemo(() => {
-    if (postalCode === '1425') return 'Palermo, Capital Federal';
-    if (postalCode.startsWith('1')) return 'CABA y Alrededores';
-    if (postalCode.startsWith('5')) return 'Córdoba, Centro';
-    if (postalCode.startsWith('2')) return 'Rosario, Santa Fe';
-    return 'Interior de Argentina';
-  }, [postalCode]);
+    return profileAddress || 'Palermo, Capital Federal';
+  }, [profileAddress]);
 
   // Categories mapper
   const categories = useMemo(() => {
@@ -375,29 +419,29 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
         </div>
 
         {/* Navigation Sub-header (Deliver to / Category Filter tags) */}
-        <div className="bg-slate-950 border-t border-slate-800/40 py-1.5 px-4 hidden sm:block">
-          <div className="max-w-6xl mx-auto flex items-center justify-between text-xs text-slate-300">
-            <div className="flex items-center gap-6">
+        <div className="bg-slate-950 border-t border-slate-800/40 py-2.5 px-4">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-300">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               
               {/* Deliver to postal code */}
-              <div className="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors" onClick={() => setIsEditingPostal(true)}>
-                <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+              <div className="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors bg-slate-900 sm:bg-transparent p-2 sm:p-0 rounded-xl border border-slate-800/80 sm:border-transparent" onClick={() => setIsEditingPostal(true)}>
+                <MapPin className="w-4 h-4 text-orange-500 shrink-0" />
                 <div className="flex flex-col leading-tight text-[11px]">
-                  <span className="text-slate-500">Enviar a</span>
-                  <span className="font-semibold text-slate-200">{locationText} ({postalCode})</span>
+                  <span className="text-slate-500 text-[9px] font-black uppercase tracking-widest leading-none mb-0.5">Enviar a</span>
+                  <span className="font-bold text-slate-200">{locationText} ({postalCode})</span>
                 </div>
               </div>
 
               {/* Categories */}
-              <div className="h-4 w-[1px] bg-slate-800" />
-              <div className="flex items-center gap-4 text-slate-400 font-normal">
+              <div className="hidden md:block h-4 w-[1px] bg-slate-800" />
+              <div className="flex items-center gap-3 text-slate-400 font-normal overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-none">
                 {categories.map((cat) => (
                   <button 
                     key={cat}
                     onClick={() => { setSelectedProduct(null); setActiveCategory(cat); setActiveSubSection('store'); }}
                     className={cn(
-                      "hover:text-white transition-colors capitalize pb-0.5",
-                      activeCategory === cat ? "border-b-2 border-orange-500 font-bold text-white" : ""
+                      "hover:text-white transition-colors capitalize pb-0.5 whitespace-nowrap text-[11px] font-bold px-2 py-0.5 rounded",
+                      activeCategory === cat ? "border-b border-orange-500 text-white" : ""
                     )}
                   >
                     {cat === 'all' ? 'Todas las Categorías' : cat}
@@ -406,7 +450,7 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
               </div>
             </div>
 
-            <div className="flex items-center gap-5 text-[11px] text-slate-400">
+            <div className="flex items-center justify-between sm:justify-end gap-4 text-[11px] text-slate-400 border-t border-slate-900 pt-2 sm:pt-0 sm:border-t-0">
               <button 
                 onClick={() => setActiveSubSection('store')}
                 className={cn(
@@ -414,13 +458,13 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
                   activeSubSection === 'store' ? "text-orange-500 font-black" : "text-slate-400"
                 )}
               >
-                Tienda Catalogo
+                Tienda Catálogo
               </button>
               
               <button 
                 onClick={() => setActiveSubSection('tracking')}
                 className={cn(
-                  "hover:text-white cursor-pointer transition-all font-bold flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900 border",
+                  "hover:text-white cursor-pointer transition-all font-bold flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-slate-900 border",
                   activeSubSection === 'tracking' ? "text-blue-400 border-blue-500/30 bg-blue-500/10" : "text-slate-300 border-slate-800"
                 )}
               >
@@ -435,38 +479,113 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
         </div>
       </header>
 
-      {/* Postal Code Editor modal popup */}
+      {/* User Profile / Shipping Address Editor Modal */}
       <AnimatePresence>
         {isEditingPostal && (
-          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-4">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full border border-gray-100"
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-7 max-w-md w-full border border-gray-100 dark:border-slate-800 space-y-6"
             >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-base text-gray-800">Elegí dónde recibir tus compras</h3>
-                <button onClick={() => setIsEditingPostal(false)} className="text-gray-400 hover:text-black">
+              <div className="flex justify-between items-center border-b border-gray-100 dark:border-slate-800 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="bg-orange-500/10 text-orange-500 p-2 rounded-xl">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-sm uppercase tracking-wider text-gray-800 dark:text-gray-100">Datos de Envío y Cuenta</h3>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Impacto en toda la App y Mapas</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsEditingPostal(false)} className="text-gray-400 hover:text-black dark:hover:text-white p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                Podrás ver costos de envío, tiempos de entrega y puntos de retiro más cercanos según tu código postal.
-              </p>
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  value={postalCode}
-                  onChange={(e) => setPostalCode(e.target.value.replace(/\D/g, '').substring(0, 4))}
-                  placeholder="Ej: 1425"
-                  className="bg-white border border-gray-300 rounded px-3 py-2 text-sm text-[#333] flex-grow focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                />
+
+              <div className="space-y-4">
+                {/* Full Name field */}
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 block">Nombre Completo</label>
+                  <input 
+                    type="text" 
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Ej: Juan Pérez"
+                    className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:outline-none transition-all font-bold"
+                  />
+                </div>
+
+                {/* Shipping Address field */}
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 block">Dirección de Entrega (Física)</label>
+                  <input 
+                    type="text" 
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                    placeholder="Ej: Av. del Libertador 4500, Palermo, CABA"
+                    className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:outline-none transition-all font-bold"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Postal Code field */}
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 block">Código Postal</label>
+                    <input 
+                      type="text" 
+                      value={postalCode}
+                      onChange={(e) => {
+                        const cleanVal = e.target.value.replace(/\D/g, '').substring(0, 4);
+                        setPostalCode(cleanVal);
+                      }}
+                      placeholder="Ej: 1425"
+                      className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:outline-none transition-all font-bold"
+                    />
+                  </div>
+
+                  {/* Phone field */}
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 block">Teléfono de Contacto</label>
+                    <input 
+                      type="text" 
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      placeholder="Ej: +54 9 11 5555-1234"
+                      className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:outline-none transition-all font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 dark:border-slate-800 pt-5 flex items-center justify-end gap-3">
                 <button 
+                  type="button"
                   onClick={() => setIsEditingPostal(false)}
-                  className="bg-blue-600 text-white font-bold text-xs px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+                  className="px-5 py-3 rounded-xl border border-gray-200 dark:border-slate-800 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-850 transition-all cursor-pointer"
                 >
-                  Usar Código
+                  Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    if (onUpdateProfile) {
+                      onUpdateProfile({
+                        fullName: editName,
+                        address: editAddress,
+                        postalCode: postalCode,
+                        phone: editPhone
+                      });
+                    } else {
+                      // Fallback if prop not provided
+                      setCheckoutAddress(editAddress);
+                    }
+                    setIsEditingPostal(false);
+                  }}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-black text-xs px-6 py-3 rounded-xl transition-all shadow-[0_10px_20px_rgba(249,115,22,0.15)] hover:shadow-[0_10px_25px_rgba(249,115,22,0.25)] flex items-center gap-1.5 cursor-pointer uppercase tracking-widest"
+                >
+                  <Check className="w-4 h-4" /> Guardar Datos
                 </button>
               </div>
             </motion.div>
@@ -475,6 +594,32 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
       </AnimatePresence>
 
       <div className="max-w-6xl mx-auto px-4 mt-6">
+        
+        {/* Prominent Shipping / Account Data Banner */}
+        <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-500/20 rounded-2xl p-4 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="bg-orange-500 text-white p-2.5 rounded-xl shadow-md shrink-0">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-black text-xs uppercase tracking-wider text-gray-800 dark:text-gray-200">Dirección de Envío y Datos de la Cuenta</h4>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">{profileAddress || "Calle Falsa 123, Palermo, Capital Federal"}</p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
+                <span>Destinatario: <strong className="text-gray-700 dark:text-gray-300 font-bold">{profileFullName || "Cliente Nova3D"}</strong></span>
+                <span className="text-gray-300">•</span>
+                <span>CP: <strong className="text-gray-700 dark:text-gray-300 font-bold">{profilePostalCode || postalCode}</strong></span>
+                <span className="text-gray-300">•</span>
+                <span>Tel: <strong className="text-gray-700 dark:text-gray-300 font-bold">{profilePhone || "+54 9 11 5555-1234"}</strong></span>
+              </div>
+            </div>
+          </div>
+          <button 
+            onClick={() => setIsEditingPostal(true)}
+            className="w-full md:w-auto bg-orange-500 hover:bg-orange-600 text-white text-xs font-black uppercase tracking-widest px-5 py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <Settings className="w-4 h-4" /> Modificar Datos de Envío
+          </button>
+        </div>
         
         {/* Breadcrumb row (only in store sub-section) */}
         {activeSubSection === 'store' && (
@@ -507,6 +652,11 @@ export function MercadoLibreShopView({ products, addToCart, theme, t, user }: Me
                 postalCode={postalCode}
                 theme={theme}
                 onBackToStore={() => setActiveSubSection('store')}
+                profileAddress={profileAddress}
+                profilePostalCode={profilePostalCode}
+                profileFullName={profileFullName}
+                profilePhone={profilePhone}
+                onUpdateProfile={onUpdateProfile}
               />
             </motion.div>
           ) : !selectedProduct ? (
