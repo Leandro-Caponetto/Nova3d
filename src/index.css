@@ -135,3 +135,16 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(249, 115, 22, 0.4);
 }
+
+/* Custom Leaflet Tooltip overrides */
+.leaflet-tooltip.custom-leaflet-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  font-family: inherit !important;
+}
+.leaflet-tooltip-top.custom-leaflet-tooltip::before {
+  border-top-color: rgba(15, 23, 42, 0.95) !important;
+}
+

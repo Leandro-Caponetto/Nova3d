@@ -121,7 +121,7 @@ function LeafletMapComponent({
     }).addTo(map);
     completedPolylineRef.current = completedPolyline;
 
-    // Create checkpoint markers
+    // Create checkpoint markers with high-fidelity tooltips showing the real addresses
     checkpointMarkersRef.current = geoCheckpoints.map((checkpoint, index) => {
       const isCompleted = progress >= (index / (geoCheckpoints.length - 1)) * 100;
       const isActive = activePhaseIndex === index && progress < 100;
@@ -148,6 +148,20 @@ function LeafletMapComponent({
 
       const marker = L.marker([checkpoint.lat, checkpoint.lng], { icon: markerIcon }).addTo(map);
       marker.on('click', () => setSelectedCheckpoint(index));
+
+      // Bind dynamic high-fidelity tooltip with address sub-details
+      marker.bindTooltip(`
+        <div class="bg-slate-900/95 border border-slate-700/60 rounded-xl px-3 py-1.5 text-[10px] font-bold shadow-2xl space-y-0.5 text-white">
+          <div class="text-orange-400 font-black tracking-wider uppercase text-[8px]">${checkpoint.label}</div>
+          <div class="text-slate-200 text-[10px] leading-tight font-medium">${checkpoint.sub}</div>
+        </div>
+      `, {
+        permanent: true,
+        direction: 'top',
+        offset: [0, -18],
+        className: 'custom-leaflet-tooltip'
+      });
+
       return marker;
     });
 
@@ -172,6 +186,14 @@ function LeafletMapComponent({
       driverMarkerRef.current = L.marker([center.lat, center.lng], { icon: truckIcon }).addTo(map);
     }
 
+    // Fit bounds dynamically so the whole route and addresses are fully visible inside the frame
+    try {
+      const bounds = L.latLngBounds(geoCheckpoints.map(c => [c.lat, c.lng]));
+      map.fitBounds(bounds, { padding: [50, 50] });
+    } catch (e) {
+      console.warn("Failed to fit Leaflet map bounds:", e);
+    }
+
     // Cleanup map on unmount
     return () => {
       map.off('dragstart', onMapDrag);
@@ -182,7 +204,7 @@ function LeafletMapComponent({
       map.remove();
       mapRef.current = null;
     };
-  }, [theme, osrmRoutePoints]);
+  }, [theme, osrmRoutePoints, geoCheckpoints]);
 
   // Update Driver Marker, Polylines and Map Pan
   useEffect(() => {
@@ -287,7 +309,7 @@ function LeafletMapComponent({
     if (followDriver) {
       map.panTo([center.lat, center.lng]);
     }
-  }, [center.lat, center.lng, center.heading, progress, followDriver, activePhaseIndex, osrmRoutePoints]);
+  }, [center.lat, center.lng, center.heading, progress, followDriver, activePhaseIndex, osrmRoutePoints, geoCheckpoints]);
 
   return <div ref={containerRef} className="w-full h-full rounded-2xl" style={{ minHeight: '100%', zIndex: 1 }} />;
 }
@@ -574,14 +596,63 @@ export function ProductTrackingView({
     };
   }, [locationText, postalCode]);
 
-  // Real geographic coordinates for Google Maps (Buenos Aires, Argentina)
-  const geoCheckpoints = useMemo(() => [
-    { lat: -34.5889, lng: -58.4306, label: "Fábrica Nova3D", sub: "Palermo, CABA", emoji: "🏢" },
-    { lat: -34.5612, lng: -58.4563, label: "Centro de Clasificación Flex", sub: "Belgrano, CABA", emoji: "📦" },
-    { lat: -34.5385, lng: -58.4751, label: "Av. General Paz Checkpoint", sub: "Límite CABA", emoji: "🛣️" },
-    { lat: -34.5106, lng: -58.4984, label: "Distribuidora Zona Norte", sub: "Olivos", emoji: "🏪" },
-    { lat: targetCoords.lat, lng: targetCoords.lng, label: "Tu Domicilio", sub: locationText || "San Isidro, GBA", emoji: "🏠" }
-  ], [targetCoords, locationText]);
+  // Real geographic coordinates for Google Maps & Leaflet (dynamic routing based on destination city)
+  const geoCheckpoints = useMemo(() => {
+    const cleanAddress = (locationText || '').toLowerCase();
+    const cleanPostal = (postalCode || '').toLowerCase();
+
+    // Factory is always the starting point
+    const startPoint = { lat: -34.5889, lng: -58.4306, label: "Fábrica Nova3D", sub: "Palermo, CABA", emoji: "🏢" };
+
+    if (cleanAddress.includes('córdoba') || cleanPostal.startsWith('5')) {
+      return [
+        startPoint,
+        { lat: -34.5612, lng: -58.4563, label: "Centro de Clasificación Flex", sub: "Belgrano, CABA", emoji: "📦" },
+        { lat: -33.9806, lng: -60.5694, label: "Ruta 9 - San Nicolás", sub: "Provincia de Buenos Aires", emoji: "🛣️" },
+        { lat: -31.4135, lng: -64.1811, label: "Centro Logístico Córdoba", sub: "Córdoba", emoji: "🏪" },
+        { lat: targetCoords.lat, lng: targetCoords.lng, label: "Tu Domicilio", sub: locationText || "Córdoba, Centro", emoji: "🏠" }
+      ];
+    }
+    
+    if (cleanAddress.includes('rosario') || cleanAddress.includes('santa fe') || cleanPostal.startsWith('2')) {
+      return [
+        startPoint,
+        { lat: -34.5612, lng: -58.4563, label: "Centro de Clasificación Flex", sub: "Belgrano, CABA", emoji: "📦" },
+        { lat: -33.9806, lng: -60.5694, label: "Ruta 9 - San Nicolás", sub: "Provincia de Buenos Aires", emoji: "🛣️" },
+        { lat: targetCoords.lat, lng: targetCoords.lng, label: "Tu Domicilio", sub: locationText || "Rosario, Santa Fe", emoji: "🏠" }
+      ];
+    }
+
+    if (cleanAddress.includes('mendoza') || cleanPostal.startsWith('4')) {
+      return [
+        startPoint,
+        { lat: -34.6158, lng: -58.4333, label: "Centro de Clasificación CABA", sub: "Caballito, CABA", emoji: "📦" },
+        { lat: -34.5997, lng: -60.9486, label: "Ruta 7 - Junín", sub: "Buenos Aires", emoji: "🛣️" },
+        { lat: -33.3015, lng: -66.3378, label: "Centro Logístico San Luis", sub: "San Luis", emoji: "🏪" },
+        { lat: targetCoords.lat, lng: targetCoords.lng, label: "Tu Domicilio", sub: locationText || "Mendoza, Centro", emoji: "🏠" }
+      ];
+    }
+
+    // Default for Palermo / CABA / GBA local delivery
+    const isPalermo = cleanAddress.includes('palermo') || cleanAddress.includes('recoleta') || cleanAddress.includes('almagro') || cleanAddress.includes('capital');
+    if (isPalermo) {
+      return [
+        startPoint,
+        { lat: -34.5845, lng: -58.4200, label: "Distribuidor Local Palermo", sub: "CABA", emoji: "📦" },
+        { lat: -34.5860, lng: -58.4250, label: "Repartidor en Zona", sub: "Palermo Soho", emoji: "🛵" },
+        { lat: targetCoords.lat, lng: targetCoords.lng, label: "Tu Domicilio", sub: locationText || "Palermo, CABA", emoji: "🏠" }
+      ];
+    }
+
+    // Default GBA (Olivos, San Isidro, etc.)
+    return [
+      startPoint,
+      { lat: -34.5612, lng: -58.4563, label: "Centro de Clasificación Flex", sub: "Belgrano, CABA", emoji: "📦" },
+      { lat: -34.5385, lng: -58.4751, label: "Av. General Paz Checkpoint", sub: "Límite CABA", emoji: "🛣️" },
+      { lat: -34.5106, lng: -58.4984, label: "Distribuidora Zona Norte", sub: "Olivos", emoji: "🏪" },
+      { lat: targetCoords.lat, lng: targetCoords.lng, label: "Tu Domicilio", sub: locationText || "San Isidro, GBA", emoji: "🏠" }
+    ];
+  }, [targetCoords, locationText, postalCode]);
 
   // Keep track of downloaded real-world street points and step info (OSRM public keyless API)
   const [osrmRoutePoints, setOsrmRoutePoints] = useState<Array<{ lat: number; lng: number }>>([]);
