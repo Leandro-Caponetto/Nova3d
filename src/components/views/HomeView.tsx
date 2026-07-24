@@ -6,6 +6,7 @@ import { Stat } from '../common/Stat';
 import { TestimonialsSection } from './TestimonialsSection';
 import { HeroScene } from '../home/HeroScene';
 import { BlogSection } from '../home/BlogSection';
+import { FeaturedVideoSection } from '../home/FeaturedVideoSection';
 import { Product } from '../../types';
 import { supabase } from '../../lib/supabase';
 
@@ -181,6 +182,9 @@ export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhats
           </div>
         </div>
       </motion.div>
+
+      {/* Featured Video Loop Showcase */}
+      <FeaturedVideoSection theme={theme} />
 
       {/* Novedades Section */}
       <AnimatePresence>
