@@ -1,345 +1,290 @@
-import React, { useRef, Suspense } from 'react';
-import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
-import { Float, PerspectiveCamera } from '@react-three/drei';
+import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { cn } from '../../lib/utils';
 
-function StylizedSatellite({ theme }: { theme: 'dark' | 'light' }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const solarPanelRef = useRef<THREE.Group>(null);
-  const { viewport } = useThree();
-  const isMobile = viewport.width < 5;
+export function HeroScene({ theme }: { theme: 'dark' | 'light' }) {
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const color =
-    theme === 'dark'
-      ? '#f59e0b'
-      : '#d97706';
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
+    // Scene, Camera, Renderer
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      45,
+      container.clientWidth / container.clientHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(0, 0, 12);
 
-    if (groupRef.current) {
-      const radius = isMobile ? 3.5 : 6;
+    const renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      antialias: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
 
-      groupRef.current.position.x =
-        Math.cos(t * 0.4) * radius;
+    // Group to hold Earth, Atmosphere & Moon for mouse tilt
+    const mainGroup = new THREE.Group();
+    scene.add(mainGroup);
 
-      groupRef.current.position.z =
-        Math.sin(t * 0.4) * radius;
+    // --- EARTH ---
+    // Earth core sphere
+    const earthRadius = 2.8;
+    const earthGeo = new THREE.SphereGeometry(earthRadius, 64, 64);
+    
+    // Canvas procedural texture for Earth (continents + oceans + glowing grid)
+    const earthCanvas = document.createElement('canvas');
+    earthCanvas.width = 1024;
+    earthCanvas.height = 512;
+    const ctx = earthCanvas.getContext('2d');
+    if (ctx) {
+      // Base deep ocean gradient
+      const grad = ctx.createLinearGradient(0, 0, 0, 512);
+      grad.addColorStop(0, '#0284c7'); // Cyan blue
+      grad.addColorStop(0.5, '#0369a1');
+      grad.addColorStop(1, '#0f172a'); // Deep navy
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1024, 512);
 
-      groupRef.current.position.y =
-        Math.sin(t * 0.2) * (isMobile ? 1 : 2);
+      // Procedural stylized continents
+      ctx.fillStyle = '#f59e0b'; // Amber landmasses
+      ctx.globalAlpha = 0.85;
 
-      groupRef.current.rotation.y =
-        -t * 0.4;
+      // Draw stylized continent shapes
+      const drawBlob = (cx: number, cy: number, rx: number, ry: number) => {
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, Math.PI / 6, 0, Math.PI * 2);
+        ctx.fill();
+      };
 
-      groupRef.current.rotation.x =
-        Math.sin(t * 0.5) * 0.2;
+      // Americas
+      drawBlob(280, 180, 70, 110);
+      drawBlob(340, 330, 80, 120);
+      // Europe & Africa
+      drawBlob(540, 170, 75, 60);
+      drawBlob(550, 310, 85, 110);
+      // Asia & Australia
+      drawBlob(750, 180, 130, 90);
+      drawBlob(830, 360, 60, 50);
+
+      // Lat/Long Latitude lines grid overlay
+      ctx.globalAlpha = 0.15;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < 512; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(1024, y);
+        ctx.stroke();
+      }
+      for (let x = 0; x < 1024; x += 64) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 512);
+        ctx.stroke();
+      }
     }
 
-    if (solarPanelRef.current) {
-      solarPanelRef.current.rotation.z =
-        Math.sin(t * 0.5) * 0.1;
+    const earthTexture = new THREE.CanvasTexture(earthCanvas);
+    const earthMat = new THREE.MeshPhongMaterial({
+      map: earthTexture,
+      shininess: 25,
+      specular: new THREE.Color(0x38bdf8),
+      bumpScale: 0.05
+    });
+
+    const earthMesh = new THREE.Mesh(earthGeo, earthMat);
+    mainGroup.add(earthMesh);
+
+    // Earth Outer Atmosphere Glow Ring
+    const atmoGeo = new THREE.SphereGeometry(earthRadius * 1.06, 48, 48);
+    const atmoMat = new THREE.MeshBasicMaterial({
+      color: theme === 'dark' ? 0xf59e0b : 0x0284c7,
+      transparent: true,
+      opacity: 0.18,
+      side: THREE.BackSide
+    });
+    const atmosphereMesh = new THREE.Mesh(atmoGeo, atmoMat);
+    mainGroup.add(atmosphereMesh);
+
+    // Earth Wireframe Orbit Ring (Equator halo)
+    const ringGeo = new THREE.RingGeometry(earthRadius * 1.2, earthRadius * 1.25, 64);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xf59e0b,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.DoubleSide
+    });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.rotation.x = Math.PI / 2.5;
+    mainGroup.add(ringMesh);
+
+    // --- MOON (LA LUNA) ---
+    const moonRadius = 0.65;
+    const moonGeo = new THREE.SphereGeometry(moonRadius, 32, 32);
+
+    // Procedural Moon texture
+    const moonCanvas = document.createElement('canvas');
+    moonCanvas.width = 256;
+    moonCanvas.height = 128;
+    const mctx = moonCanvas.getContext('2d');
+    if (mctx) {
+      mctx.fillStyle = '#cbd5e1'; // Slate gray base
+      mctx.fillRect(0, 0, 256, 128);
+      mctx.fillStyle = '#64748b'; // Craters
+      for (let i = 0; i < 40; i++) {
+        const x = Math.random() * 256;
+        const y = Math.random() * 128;
+        const r = Math.random() * 12 + 2;
+        mctx.beginPath();
+        mctx.arc(x, y, r, 0, Math.PI * 2);
+        mctx.fill();
+      }
     }
-  });
+    const moonTexture = new THREE.CanvasTexture(moonCanvas);
+    const moonMat = new THREE.MeshStandardMaterial({
+      map: moonTexture,
+      roughness: 0.8,
+      metalness: 0.1
+    });
+
+    const moonPivot = new THREE.Group();
+    mainGroup.add(moonPivot);
+
+    const moonMesh = new THREE.Mesh(moonGeo, moonMat);
+    const moonOrbitRadius = 5.2;
+    moonMesh.position.set(moonOrbitRadius, 0.8, 0);
+    moonPivot.add(moonMesh);
+
+    // Moon Orbit Trail Ring
+    const orbitTrailGeo = new THREE.RingGeometry(moonOrbitRadius - 0.02, moonOrbitRadius + 0.02, 128);
+    const orbitTrailMat = new THREE.MeshBasicMaterial({
+      color: 0x94a3b8,
+      transparent: true,
+      opacity: 0.2,
+      side: THREE.DoubleSide
+    });
+    const orbitTrailMesh = new THREE.Mesh(orbitTrailGeo, orbitTrailMat);
+    orbitTrailMesh.rotation.x = Math.PI / 2;
+    mainGroup.add(orbitTrailMesh);
+
+    // --- STARS PARTICLES ---
+    const starCount = 800;
+    const starGeo = new THREE.BufferGeometry();
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount * 3; i += 3) {
+      starPositions[i] = (Math.random() - 0.5) * 60;
+      starPositions[i + 1] = (Math.random() - 0.5) * 60;
+      starPositions[i + 2] = (Math.random() - 0.5) * 60;
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    const starMat = new THREE.PointsMaterial({
+      color: theme === 'dark' ? 0xffffff : 0x0f172a,
+      size: 0.08,
+      transparent: true,
+      opacity: 0.7
+    });
+    const starPoints = new THREE.Points(starGeo, starMat);
+    scene.add(starPoints);
+
+    // --- LIGHTING ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+    sunLight.position.set(10, 10, 10);
+    scene.add(sunLight);
+
+    const pointLight = new THREE.PointLight(0xf59e0b, 1.5, 20);
+    pointLight.position.set(-8, -5, 5);
+    scene.add(pointLight);
+
+    // --- MOUSE PARALLAX INTERACTION ---
+    let targetX = 0;
+    let targetY = 0;
+    const handleMouseMove = (e: MouseEvent) => {
+      const windowHalfX = window.innerWidth / 2;
+      const windowHalfY = window.innerHeight / 2;
+      targetX = (e.clientX - windowHalfX) * 0.0005;
+      targetY = (e.clientY - windowHalfY) * 0.0005;
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+
+    // --- RESIZE HANDLER ---
+    const handleResize = () => {
+      if (!container) return;
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    };
+    window.addEventListener('resize', handleResize);
+
+    // --- ANIMATION LOOP ---
+    let animationFrameId: number;
+    let moonAngle = 0;
+
+    const animate = () => {
+      animationFrameId = requestAnimationFrame(animate);
+
+      // Rotate Earth on axis
+      earthMesh.rotation.y += 0.003;
+      atmosphereMesh.rotation.y += 0.002;
+      ringMesh.rotation.z += 0.001;
+
+      // Orbit Moon around Earth
+      moonAngle += 0.008;
+      moonPivot.rotation.y = moonAngle;
+      moonMesh.rotation.y += 0.01;
+
+      // Rotate starfield slowly
+      starPoints.rotation.y += 0.0003;
+
+      // Smooth camera tilt towards mouse
+      mainGroup.rotation.y += (targetX - mainGroup.rotation.y) * 0.05;
+      mainGroup.rotation.x += (targetY - mainGroup.rotation.x) * 0.05;
+
+      renderer.render(scene, camera);
+    };
+
+    animate();
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
+      if (container && renderer.domElement) {
+        container.removeChild(renderer.domElement);
+      }
+      renderer.dispose();
+      earthGeo.dispose();
+      earthMat.dispose();
+      moonGeo.dispose();
+      moonMat.dispose();
+      starGeo.dispose();
+      starMat.dispose();
+    };
+  }, [theme]);
 
   return (
-    <group ref={groupRef} scale={isMobile ? 0.3 : 0.5}>
-      {/* MAIN BODY SEGMENTS - Multi-part cylinder based on image */}
-      <group rotation={[0, 0, Math.PI / 2]}>
-        {/* Main large cylinder */}
-        <mesh position={[0, 0, 0]}>
-          <cylinderGeometry args={[0.5, 0.45, 1.2, 32]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.6} roughness={0.3} />
-        </mesh>
-        
-        {/* Top white section */}
-        <mesh position={[0.8, 0, 0]}>
-          <cylinderGeometry args={[0.4, 0.5, 0.4, 32]} />
-          <meshStandardMaterial color="#f8fafc" metalness={0.4} roughness={0.2} />
-        </mesh>
+    <div className="w-full h-[450px] md:h-[550px] relative flex items-center justify-center overflow-hidden rounded-3xl pointer-events-auto">
+      {/* 3D Canvas Container */}
+      <div ref={containerRef} className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing" />
 
-        {/* Bottom narrower section */}
-        <mesh position={[-0.8, 0, 0]}>
-          <cylinderGeometry args={[0.3, 0.3, 0.6, 32]} />
-          <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.1} />
-        </mesh>
+      {/* Floating Badges for Earth & Moon */}
+      <div className="absolute top-4 left-4 z-10 bg-slate-950/80 backdrop-blur-md border border-amber-500/30 text-white px-3.5 py-1.5 rounded-full text-[10px] font-mono tracking-widest flex items-center gap-2 shadow-lg">
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <span className="uppercase font-bold text-amber-400">PLANETA TIERRA Y LA LUNA 3D</span>
+      </div>
 
-        {/* Mid collar */}
-        <mesh position={[0.3, 0, 0]}>
-          <cylinderGeometry args={[0.55, 0.55, 0.1, 32]} />
-          <meshStandardMaterial color="#64748b" metalness={0.9} roughness={0.1} />
-        </mesh>
-      </group>
-
-      {/* SOLAR PANELS - Rectangular with blue grid pattern */}
-      <group ref={solarPanelRef}>
-        <group position={[2.5, 0, 0]}>
-          <mesh>
-            <boxGeometry args={[3, 1, 0.05]} />
-            <meshStandardMaterial 
-              color="#1e3a8a" 
-              emissive="#1e40af" 
-              emissiveIntensity={0.4} 
-              metalness={0.9} 
-              roughness={0.1} 
-            />
-          </mesh>
-          {/* Panel Grid Lines */}
-          {[1, 2].map((i) => (
-            <mesh key={`h-${i}`} position={[i - 1.5, 0, 0.03]}>
-              <boxGeometry args={[0.02, 1, 0.01]} />
-              <meshBasicMaterial color="#60a5fa" transparent opacity={0.5} />
-            </mesh>
-          ))}
-          <mesh position={[0, 0, 0.03]}>
-            <boxGeometry args={[3, 0.02, 0.01]} />
-            <meshBasicMaterial color="#60a5fa" transparent opacity={0.5} />
-          </mesh>
-        </group>
-
-        <group position={[-2.5, 0, 0]}>
-          <mesh>
-            <boxGeometry args={[3, 1, 0.05]} />
-            <meshStandardMaterial 
-              color="#1e3a8a" 
-              emissive="#1e40af" 
-              emissiveIntensity={0.4} 
-              metalness={0.9} 
-              roughness={0.1} 
-            />
-          </mesh>
-          {/* Panel Grid Lines */}
-          {[1, 2].map((i) => (
-            <mesh key={`h-neg-${i}`} position={[i - 1.5, 0, 0.03]}>
-              <boxGeometry args={[0.02, 1, 0.01]} />
-              <meshBasicMaterial color="#60a5fa" transparent opacity={0.5} />
-            </mesh>
-          ))}
-          <mesh position={[0, 0, 0.03]}>
-            <boxGeometry args={[3, 0.02, 0.01]} />
-            <meshBasicMaterial color="#60a5fa" transparent opacity={0.5} />
-          </mesh>
-        </group>
-      </group>
-
-      {/* MAIN TOP DISH - White large disk */}
-      <group position={[0, 1.2, 0]} rotation={[0, 0, 0]}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.7, 0.7, 0.1, 32]} />
-          <meshStandardMaterial color="#f1f5f9" />
-        </mesh>
-        <mesh position={[0, 0.1, 0]}>
-          <sphereGeometry args={[0.6, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshStandardMaterial color="#f8fafc" />
-        </mesh>
-      </group>
-
-      {/* SIDE SMALL DISHES */}
-      <group position={[0.6, -0.2, 0.4]} rotation={[0, Math.PI/4, 0]}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.2, 0.2, 0.05, 16]} />
-          <meshStandardMaterial color="#cbd5e1" />
-        </mesh>
-      </group>
-
-      {/* SIGNAL BEACON */}
-      <mesh position={[0, 0.4, 0.7]}>
-        <sphereGeometry args={[0.06, 16, 16]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={3}
-        />
-      </mesh>
-    </group>
-  );
-}
-
-function RotatingPlanet({
-  theme
-}: {
-  theme: 'dark' | 'light'
-}) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const cloudsRef = useRef<THREE.Mesh>(null);
-  const ringRef = useRef<THREE.Group>(null);
-  const { viewport } = useThree();
-  const isMobile = viewport.width < 5;
-
-  // Cargar textura de la Tierra
-  const earthTexture = useLoader(THREE.TextureLoader, 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');
-
-  const color =
-    theme === 'dark'
-      ? '#f59e0b'
-      : '#d97706';
-
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
-
-    if (meshRef.current) {
-      meshRef.current.rotation.y =
-        t * 0.1;
-    }
-
-    if (cloudsRef.current) {
-      cloudsRef.current.rotation.y =
-        t * 0.13;
-    }
-
-    if (ringRef.current) {
-      ringRef.current.rotation.z = -t * 0.2;
-    }
-  });
-
-  const planetScale = isMobile ? 0.8 : 1;
-  const orbitRadius = isMobile ? 2.2 : 3.2;
-
-  return (
-    <group scale={planetScale}>
-      <Float
-        speed={1.5}
-        rotationIntensity={0.1}
-        floatIntensity={0.3}
-      >
-        {/* TECH RING WITH MOON */}
-        <group ref={ringRef} rotation={[Math.PI / 2.2, 0, 0]}>
-          <mesh>
-            <torusGeometry
-              args={[orbitRadius, 0.01, 16, 100]}
-            />
-            <meshStandardMaterial
-              color={color}
-              emissive={color}
-              emissiveIntensity={2}
-              transparent
-              opacity={0.2}
-            />
-          </mesh>
-
-          {/* Little Moon with Subtle Glow */}
-          <group position={[orbitRadius, 0, 0]}>
-            <mesh>
-              <sphereGeometry args={[0.08, 32, 32]} />
-              <meshStandardMaterial 
-                color="#ffffff" 
-                emissive="#ffffff" 
-                emissiveIntensity={2}
-              />
-            </mesh>
-            {/* Soft Glow Halo */}
-            <mesh scale={2.5}>
-              <sphereGeometry args={[0.08, 32, 32]} />
-              <meshBasicMaterial 
-                color="#ffffff" 
-                transparent 
-                opacity={0.15} 
-                blending={THREE.AdditiveBlending}
-              />
-            </mesh>
-            <pointLight intensity={0.3} distance={1} color="#ffffff" />
-          </group>
-        </group>
-
-        {/* PLANET */}
-        <mesh ref={meshRef}>
-          <sphereGeometry
-            args={[1.5, 64, 64]}
-          />
-          <meshStandardMaterial
-            map={earthTexture}
-            metalness={0.4}
-            roughness={0.6}
-            emissive={theme === 'dark' ? '#0ea5e9' : '#000'}
-            emissiveIntensity={theme === 'dark' ? 0.2 : 0}
-          />
-        </mesh>
-
-        {/* CLOUDS */}
-        <mesh
-          ref={cloudsRef}
-          scale={1.03}
-        >
-          <sphereGeometry
-            args={[1.5, 64, 64]}
-          />
-          <meshStandardMaterial
-            color="#ffffff"
-            transparent
-            opacity={0.08}
-            depthWrite={false}
-          />
-        </mesh>
-
-        {/* GLOW */}
-        <mesh scale={1.1}>
-          <sphereGeometry
-            args={[1.5, 64, 64]}
-          />
-          <meshStandardMaterial
-            color={
-              theme === 'dark'
-                ? '#0ea5e9'
-                : '#60a5fa'
-            }
-            transparent
-            opacity={0.15}
-            side={THREE.BackSide}
-          />
-        </mesh>
-      </Float>
-    </group>
-  );
-}
-
-export function HeroScene({
-  theme
-}: {
-  theme: 'dark' | 'light'
-}) {
-  return (
-    <div className="w-full h-full absolute inset-0 pointer-events-none opacity-85 overflow-hidden">
-      <Canvas
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: true }}
-        camera={{ position: [0, 0, 8], fov: 45 }}
-      >
-        <PerspectiveCamera
-          makeDefault
-          position={[0, 0, 8]}
-        />
-
-        <ambientLight intensity={0.8} />
-
-        <pointLight
-          position={[10, 10, 10]}
-          intensity={2}
-          color="#f59e0b"
-        />
-
-        <spotLight
-          position={[-10, 10, 10]}
-          angle={0.3}
-          penumbra={1}
-          intensity={2}
-        />
-
-        <Suspense fallback={null}>
-          <RotatingPlanet theme={theme} />
-          <StylizedSatellite theme={theme} />
-        </Suspense>
-
-        <fog
-          attach="fog"
-          args={[
-            theme === 'dark'
-              ? '#000'
-              : '#fff',
-            5,
-            15
-          ]}
-        />
-      </Canvas>
+      <div className="absolute bottom-4 right-4 z-10 bg-slate-950/80 backdrop-blur-md border border-white/10 text-slate-300 px-3.5 py-1.5 rounded-full text-[10px] font-mono hidden sm:flex items-center gap-2 shadow-lg">
+        <span>🌐 Órbita Realista interactiva // Arrastra con el mouse</span>
+      </div>
     </div>
   );
 }
