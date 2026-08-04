@@ -48,6 +48,52 @@
   box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
 }
 
+@keyframes orbitSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes orbitSpinReverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes orbitPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.6; }
+  50% { transform: scale(1.05) rotate(180deg); opacity: 0.9; }
+}
+
+@keyframes floatOrbital {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
+}
+
+.animate-orbit-spin {
+  animation: orbitSpin 35s linear infinite;
+}
+
+.animate-orbit-reverse {
+  animation: orbitSpinReverse 45s linear infinite;
+}
+
+.animate-orbit-pulse {
+  animation: orbitPulse 12s ease-in-out infinite;
+}
+
+.animate-float-orbital {
+  animation: floatOrbital 6s ease-in-out infinite;
+}
+
+.orbital-glass-panel {
+  background: rgba(5, 10, 20, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.orbital-glass-panel:hover {
+  background: rgba(5, 12, 28, 0.65);
+}
+
 .glow-text {
   text-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
 }

@@ -58,7 +58,7 @@ export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhats
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="relative min-h-[85vh] flex flex-col items-center justify-center overflow-hidden"
+        className="relative min-h-[85vh] flex flex-col items-center justify-end pb-28 pt-48 overflow-hidden"
       >
         {/* Background Layer (Cleaned up, GIF removed) */}
         <div className={cn("absolute inset-0 z-0", theme === 'dark' ? "bg-black" : "bg-white")}>
@@ -71,102 +71,35 @@ export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhats
           <div className="absolute inset-0 technical-grid opacity-10" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 py-32 text-center relative z-10">
+        <div className="max-w-7xl mx-auto px-4 text-center relative z-10 mt-auto">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/10 blur-[150px] rounded-full pointer-events-none" />
           
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="inline-block mb-10 px-6 py-2 rounded-xl border border-primary/40 bg-primary/10 text-primary text-[9px] font-black tracking-[0.4em] uppercase backdrop-blur-md shadow-[0_0_20px_rgba(245,158,11,0.2)]"
-          >
-            <span className="flex items-center gap-3">
-              <Sparkles className="w-3 h-3 animate-pulse" /> {t.heroSub}
-            </span>
-          </motion.div>
+          {t.heroSub && (
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="inline-block mb-10 px-6 py-2 rounded-xl border border-primary/40 bg-primary/10 text-primary text-[9px] font-black tracking-[0.4em] uppercase backdrop-blur-md shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+            >
+              <span className="flex items-center gap-3">
+                <Sparkles className="w-3 h-3 animate-pulse" /> {t.heroSub}
+              </span>
+            </motion.div>
+          )}
           
-          <div className="relative mb-14 select-none group">
-            {/* Ambient Cyan/White Neon Backglow (Emission/refraction onto screen and space behind) */}
-            <h1 
-              style={{
-                transform: `translate(${mouse.x * -15}px, ${mouse.y * -15}px) scale(0.98)`,
-                transition: 'transform 0.15s ease-out'
-              }}
-              className="text-5xl md:text-[120px] lg:text-[140px] tracking-tighter leading-[0.85] uppercase absolute inset-0 pointer-events-none opacity-45 dark:opacity-60 blur-[32px] md:blur-[48px] z-0 select-none"
-            >
-              <span className="font-light tracking-tight block mb-2 text-orange-500/30 dark:text-orange-400/25">
-                {t.heroTitle1}
-              </span>
-              <span className="font-black italic block text-cyan-400/40 dark:text-cyan-400/35">
-                {t.heroTitle2}
-              </span>
-            </h1>
 
-            {/* Deep Cast Shadow (Simulates projection onto the background rotating planet) */}
-            <h1 
-              style={{
-                transform: `translate(${mouse.x * -28}px, ${mouse.y * -28}px) scale(1.005)`,
-                transition: 'transform 0.18s ease-out'
-              }}
-              className="text-5xl md:text-[120px] lg:text-[140px] tracking-tighter leading-[0.85] uppercase absolute inset-0 pointer-events-none opacity-60 dark:opacity-85 blur-[12px] md:blur-[20px] z-0 select-none mix-blend-multiply dark:mix-blend-normal"
-            >
-              <span className="font-light tracking-tight block mb-2 text-black/80 dark:text-black">
-                {t.heroTitle1}
-              </span>
-              <span className="font-black italic block text-black/90 dark:text-black">
-                {t.heroTitle2}
-              </span>
-            </h1>
-
-            {/* Sharp Contact Shadow (Provides immediate crisp depth perception relative to the letters) */}
-            <h1 
-              style={{
-                transform: `translate(${mouse.x * -10}px, ${mouse.y * -10}px) scale(1.002)`,
-                transition: 'transform 0.1s ease-out'
-              }}
-              className="text-5xl md:text-[120px] lg:text-[140px] tracking-tighter leading-[0.85] uppercase absolute inset-0 pointer-events-none opacity-80 blur-[4px] md:blur-[6px] z-0 select-none mix-blend-multiply dark:mix-blend-normal"
-            >
-              <span className="font-light tracking-tight block mb-2 text-black/70 dark:text-zinc-950/90">
-                {t.heroTitle1}
-              </span>
-              <span className="font-black italic block text-black/85 dark:text-zinc-950/90">
-                {t.heroTitle2}
-              </span>
-            </h1>
-
-            {/* Primary Interactive Front 3D Text Panel - Completely Static & Clean */}
-            <h1 
-              style={{
-                textShadow: theme === 'dark' 
-                  ? '0 2px 10px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.5)'
-                  : '0 2px 10px rgba(0,0,0,0.15), 0 8px 20px rgba(0,0,0,0.1)'
-              }}
-              className="text-5xl md:text-[120px] lg:text-[140px] tracking-tighter leading-[0.85] uppercase relative z-10 pointer-events-none"
-            >
-              <span className={cn(
-                "font-light tracking-tight block mb-2",
-                theme === 'dark' ? "text-3d-steel-dark" : "text-3d-steel-light"
-              )}>
-                {t.heroTitle1}
-              </span>
-              <span className={cn(
-                "font-black italic block",
-                theme === 'dark' ? "text-3d-cyan-dark" : "text-3d-cyan-light"
-              )}>
-                {t.heroTitle2}
-              </span>
-            </h1>
-          </div>
           
-          <p className={cn("max-w-2xl mx-auto text-base mb-16 tracking-wide leading-relaxed font-medium transition-colors",
-            theme === 'dark' ? "text-zinc-400" : "text-zinc-600")}>
-            {t.heroDesc}
-          </p>
+          {t.heroDesc && (
+            <p className={cn("max-w-2xl mx-auto text-base mb-16 tracking-wide leading-relaxed font-medium transition-colors",
+              theme === 'dark' ? "text-zinc-400" : "text-zinc-600")}>
+              {t.heroDesc}
+            </p>
+          )}
           
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-12 sm:mt-16">
             <button 
               onClick={onExplore}
-              className="bg-primary text-white px-12 py-5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary-dark transition-all flex items-center gap-4 group shadow-[0_20px_50px_rgba(245,158,11,0.4)] hover:-translate-y-1 relative overflow-hidden"
+              className="bg-primary text-white px-10 py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary-dark transition-all flex items-center gap-4 group shadow-[0_20px_50px_rgba(245,158,11,0.4)] hover:-translate-y-1 relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
               <span className="relative z-10 flex items-center gap-4">
@@ -175,7 +108,7 @@ export function HomeView({ onExplore, onQuote, t, theme, user, products, onWhats
             </button>
             <button 
               onClick={onQuote}
-              className={cn("px-12 py-5 rounded-xl font-black text-xs uppercase tracking-widest transition-all border flex items-center gap-4 backdrop-blur-md",
+              className={cn("px-10 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all border flex items-center gap-4 backdrop-blur-md",
               theme === 'dark' ? "border-white/10 hover:bg-white/5 text-white" : "border-zinc-200 hover:bg-zinc-50 text-black")}>
               {t.customQuote}
             </button>

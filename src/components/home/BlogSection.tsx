@@ -312,3 +312,6 @@ export function BlogSection({ theme, onWhatsApp }: BlogSectionProps) {
     </section>
   );
 }
+
+export default BlogSection;
+

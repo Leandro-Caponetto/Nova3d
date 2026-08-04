@@ -20,7 +20,7 @@ const PLANETS_DATA: PlanetInfo[] = [
   { id: 'jupiter', name: 'Júpiter y Lunas', subtitle: 'Gigante Gaseoso', distanceAU: '5.20 AU (778.5M km)', phase: 5, scrollFraction: 0.57, color: '#fb923c' },
   { id: 'saturn', name: 'Saturno y Anillos', subtitle: 'División Cassini & Titán', distanceAU: '9.58 AU (1.43B km)', phase: 6, scrollFraction: 0.71, color: '#facc15' },
   { id: 'neptune', name: 'Urano y Neptuno', subtitle: 'Gigantes de Hielo', distanceAU: '30.05 AU (4.50B km)', phase: 7, scrollFraction: 0.85, color: '#06b6d4' },
-  { id: 'deepspace', name: 'Espacio Profundo', subtitle: 'Cúmulo Estelar', distanceAU: 'Space (>100 AU)', phase: 8, scrollFraction: 1.0, color: '#a855f7' },
+  { id: 'deepspace', name: 'Agujero Negro Supermasivo', subtitle: 'Singularidad & Lente Gravitacional', distanceAU: 'Límite Cosmológico', phase: 8, scrollFraction: 1.0, color: '#f97316' },
 ];
 
 export function HeroScene({ theme }: { theme: 'dark' | 'light' }) {
@@ -531,6 +531,110 @@ export function HeroScene({ theme }: { theme: 'dark' | 'light' }) {
       drawCyclone(1100, 680, 130);
 
       return new THREE.CanvasTexture(canvas);
+    };
+
+    // --- 5.5 ORBITAL TEXT RING FOR EARTH ---
+    const createEarthTextOrbitalTexture = () => {
+      const W = 2048, H = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return new THREE.CanvasTexture(canvas);
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Cyber Glass Ribbon
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+      bgGrad.addColorStop(0, 'rgba(6, 182, 212, 0.25)');
+      bgGrad.addColorStop(0.2, 'rgba(15, 23, 42, 0.85)');
+      bgGrad.addColorStop(0.8, 'rgba(15, 23, 42, 0.85)');
+      bgGrad.addColorStop(1, 'rgba(6, 182, 212, 0.25)');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 15, W, H - 30);
+
+      // Top & Bottom Glowing Borders
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = 6;
+      ctx.shadowColor = '#06b6d4';
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.moveTo(0, 15); ctx.lineTo(W, 15);
+      ctx.moveTo(0, H - 15); ctx.lineTo(W, H - 15);
+      ctx.stroke();
+
+      // Bold white/cyan/gold text with glow
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 86px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = '#f59e0b';
+      ctx.shadowBlur = 25;
+
+      const phrase = '  ★  NUEVAS DIMENSIONES  ★  NOVA3D  ★  IMPRESIÓN 3D';
+      const textWidth = ctx.measureText(phrase).width || 900;
+
+      let x = 0;
+      while (x < W + textWidth) {
+        ctx.fillText(phrase, x, H / 2);
+        x += textWidth;
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      return texture;
+    };
+
+    const createSunTextOrbitalTexture = () => {
+      const W = 2048, H = 128;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return new THREE.CanvasTexture(canvas);
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Solar Golden/Amber Cyber Ribbon
+      const bgGrad = ctx.createLinearGradient(0, 0, W, 0);
+      bgGrad.addColorStop(0, 'rgba(245, 158, 11, 0.35)');
+      bgGrad.addColorStop(0.2, 'rgba(120, 53, 15, 0.85)');
+      bgGrad.addColorStop(0.5, 'rgba(180, 83, 9, 0.9)');
+      bgGrad.addColorStop(0.8, 'rgba(120, 53, 15, 0.85)');
+      bgGrad.addColorStop(1, 'rgba(245, 158, 11, 0.35)');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 15, W, H - 30);
+
+      // Top & Bottom Glowing Amber Borders
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 6;
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.moveTo(0, 15); ctx.lineTo(W, 15);
+      ctx.moveTo(0, H - 15); ctx.lineTo(W, H - 15);
+      ctx.stroke();
+
+      // Bold white/gold text with glow
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 82px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = '#f59e0b';
+      ctx.shadowBlur = 25;
+
+      const phrase = '  ★  PROPAGANDA & DEMOSTRACIÓN EN VIDEO  ★  NOVA3D';
+      const textWidth = ctx.measureText(phrase).width || 1200;
+
+      let x = 0;
+      while (x < W + textWidth) {
+        ctx.fillText(phrase, x, H / 2);
+        x += textWidth;
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      return texture;
     };
 
 
@@ -1057,6 +1161,21 @@ export function HeroScene({ theme }: { theme: 'dark' | 'light' }) {
     const earthMoonOrbitRing = createOrbitRing(5.2, 0x38bdf8, 0.42, 0.032, Math.PI / 2.2, 0.1);
     mainGroup.add(earthMoonOrbitRing);
 
+    // 3D Orbital Text Ring wrapped around Earth ("IMPRIMÍ TODO EN 3D")
+    const earthTextRingGeo = new THREE.CylinderGeometry(earthRadius * 1.35, earthRadius * 1.35, 0.72, 64, 1, true);
+    const earthTextTexture = createEarthTextOrbitalTexture();
+    const earthTextRingMat = new THREE.MeshBasicMaterial({
+      map: earthTextTexture,
+      transparent: true,
+      opacity: 0.95,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const earthTextOrbitalMesh = new THREE.Mesh(earthTextRingGeo, earthTextRingMat);
+    earthTextOrbitalMesh.rotation.x = 0;
+    earthTextOrbitalMesh.rotation.z = 0;
+    mainGroup.add(earthTextOrbitalMesh);
+
 
     // STATION 1: SUN & MERCURY (-18, -4, -45)
     const sunGroup = new THREE.Group();
@@ -1125,6 +1244,21 @@ export function HeroScene({ theme }: { theme: 'dark' | 'light' }) {
       side: THREE.BackSide
     });
     sunGroup.add(new THREE.Mesh(sunGlowGeo3, sunGlowMat3));
+
+    // 3D Orbital Text Ring wrapped around Sun ("PROPAGANDA & DEMOSTRACIÓN EN VIDEO")
+    const sunTextRingGeo = new THREE.CylinderGeometry(6.5 * 1.38, 6.5 * 1.38, 1.2, 64, 1, true);
+    const sunTextTexture = createSunTextOrbitalTexture();
+    const sunTextRingMat = new THREE.MeshBasicMaterial({
+      map: sunTextTexture,
+      transparent: true,
+      opacity: 0.95,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const sunTextOrbitalMesh = new THREE.Mesh(sunTextRingGeo, sunTextRingMat);
+    sunTextOrbitalMesh.rotation.x = 0;
+    sunTextOrbitalMesh.rotation.z = 0;
+    sunGroup.add(sunTextOrbitalMesh);
 
     // Mercury Orbiting Sun
     const mercuryPivot = new THREE.Group();
@@ -1462,6 +1596,222 @@ export function HeroScene({ theme }: { theme: 'dark' | 'light' }) {
     };
 
 
+    // STATION 7: SUPERMASSIVE BLACK HOLE (0, 0, -385)
+    // Helper: Superheated Plasma Accretion Disk Texture Generator
+    const createBlackHoleDiskTexture = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 1024;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      const center = 512;
+      const radius = 512;
+
+      // Concentric Radial Plasma Gradient
+      const grad = ctx.createRadialGradient(center, center, 0, center, center, radius);
+      grad.addColorStop(0.00, 'rgba(0, 0, 0, 0.0)');
+      grad.addColorStop(0.22, 'rgba(0, 0, 0, 0.0)');
+      grad.addColorStop(0.25, 'rgba(255, 255, 255, 1.0)'); // Blinding white-hot inner rim
+      grad.addColorStop(0.30, 'rgba(254, 240, 138, 0.98)'); // Incandescent blue-gold plasma
+      grad.addColorStop(0.42, 'rgba(249, 115, 22, 0.88)'); // Hyper-hot orange
+      grad.addColorStop(0.62, 'rgba(225, 29, 72, 0.65)');  // Deep crimson red
+      grad.addColorStop(0.82, 'rgba(147, 51, 234, 0.30)'); // Relativistic purple haze
+      grad.addColorStop(1.00, 'rgba(0, 0, 0, 0.0)');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(center, center, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw swirling plasma noise filaments and logarithmic spiral arcs
+      ctx.save();
+      ctx.translate(center, center);
+      const spiralLines = 220;
+      for (let i = 0; i < spiralLines; i++) {
+        const angle = (i / spiralLines) * Math.PI * 2;
+        const innerR = 130 + Math.random() * 25;
+        const outerR = 430 + Math.random() * 70;
+
+        ctx.strokeStyle = `rgba(255, ${Math.floor(130 + Math.random() * 125)}, ${Math.floor(20 + Math.random() * 110)}, ${0.08 + Math.random() * 0.20})`;
+        ctx.lineWidth = 1.8 + Math.random() * 3.5;
+
+        ctx.beginPath();
+        for (let r = innerR; r < outerR; r += 10) {
+          const twist = angle + (r - innerR) * 0.009;
+          const x = Math.cos(twist) * r;
+          const y = Math.sin(twist) * r;
+          if (r === innerR) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      return texture;
+    };
+
+    const blackHoleGroup = new THREE.Group();
+    blackHoleGroup.position.set(0, 0, -385);
+    mainGroup.add(blackHoleGroup);
+
+    // 1. Singularity Event Horizon (Pitch Black Sphere that absorbs all light)
+    const singularityGeo = new THREE.SphereGeometry(5.2, 64, 64);
+    const singularityMat = new THREE.MeshBasicMaterial({
+      color: 0x000000
+    });
+    const singularityMesh = new THREE.Mesh(singularityGeo, singularityMat);
+    blackHoleGroup.add(singularityMesh);
+
+    // 2. Photon Ring (Razor-thin Einstein Light Border)
+    const photonRingShader = {
+      vertexShader: `
+        varying vec3 vNormal;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        void main() {
+          float intensity = pow(0.85 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.8);
+          vec3 brightCore = vec3(1.0, 0.98, 0.85);
+          vec3 orangeEdge = vec3(0.98, 0.45, 0.08);
+          vec3 col = mix(orangeEdge, brightCore, smoothstep(0.1, 0.8, intensity));
+          gl_FragColor = vec4(col, 1.0) * intensity * 3.5;
+        }
+      `
+    };
+    const photonRingGeo = new THREE.SphereGeometry(5.38, 64, 64);
+    const photonRingMat = new THREE.ShaderMaterial({
+      vertexShader: photonRingShader.vertexShader,
+      fragmentShader: photonRingShader.fragmentShader,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide,
+      transparent: true
+    });
+    const photonRingMesh = new THREE.Mesh(photonRingGeo, photonRingMat);
+    blackHoleGroup.add(photonRingMesh);
+
+    // 3. Main Accretion Disk (Horizontal Plasma Disc passing through black hole equator)
+    const diskTexture = createBlackHoleDiskTexture();
+    const accretionDiskGeo = new THREE.RingGeometry(5.4, 22.0, 128);
+    const accretionDiskMat = new THREE.MeshBasicMaterial({
+      map: diskTexture,
+      side: THREE.DoubleSide,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const accretionDiskMesh = new THREE.Mesh(accretionDiskGeo, accretionDiskMat);
+    // Horizontal disk orientation across equator, tilted slightly ~12° towards camera for 3D depth
+    accretionDiskMesh.rotation.x = Math.PI / 2 - 0.22;
+    accretionDiskMesh.rotation.y = 0;
+    accretionDiskMesh.rotation.z = 0;
+    blackHoleGroup.add(accretionDiskMesh);
+
+    // 4. Vertical Gravitational Lensing Arc (Light Warped Over & Under Event Horizon)
+    const lensingArcGeo = new THREE.RingGeometry(5.4, 18.5, 128);
+    const lensingArcMat = new THREE.MeshBasicMaterial({
+      map: diskTexture,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.88,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const lensingArcMesh = new THREE.Mesh(lensingArcGeo, lensingArcMat);
+    lensingArcMesh.rotation.x = 0;
+    lensingArcMesh.rotation.y = 0;
+    lensingArcMesh.rotation.z = 0;
+    blackHoleGroup.add(lensingArcMesh);
+
+    // 5. Outer Gravitational Lensing & Distortion Halo (Ultra-Subtle & Faint)
+    const lensHaloShader = {
+      vertexShader: `
+        varying vec3 vNormal;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        void main() {
+          float rim = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
+          float glow = pow(rim, 4.2);
+          vec3 cyanGlow = vec3(0.3, 0.7, 1.0);
+          vec3 goldGlow = vec3(1.0, 0.5, 0.1);
+          vec3 purpleGlow = vec3(0.5, 0.2, 0.8);
+          
+          vec3 col = mix(goldGlow, cyanGlow, smoothstep(0.3, 0.8, glow));
+          col = mix(col, purpleGlow, smoothstep(0.8, 1.0, glow));
+          
+          // Very faint, almost invisible atmospheric lensing glow for high realism
+          gl_FragColor = vec4(col, 1.0) * glow * 0.18;
+        }
+      `
+    };
+    const lensHaloGeo = new THREE.SphereGeometry(26.0, 48, 48);
+    const lensHaloMat = new THREE.ShaderMaterial({
+      vertexShader: lensHaloShader.vertexShader,
+      fragmentShader: lensHaloShader.fragmentShader,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide,
+      transparent: true
+    });
+    const lensHaloMesh = new THREE.Mesh(lensHaloGeo, lensHaloMat);
+    blackHoleGroup.add(lensHaloMesh);
+
+    // 6. Infalling Light & Matter Spiral Particles (Horizontal Infalling Swirl)
+    const infallingCount = 500;
+    const infallingGeo = new THREE.BufferGeometry();
+    const infallingPositions = new Float32Array(infallingCount * 3);
+    const infallingColors = new Float32Array(infallingCount * 3);
+    const infallingRadii = new Float32Array(infallingCount);
+    const infallingAngles = new Float32Array(infallingCount);
+    const infallingSpeeds = new Float32Array(infallingCount);
+    const infallingYOffsets = new Float32Array(infallingCount);
+
+    for (let i = 0; i < infallingCount; i++) {
+      const r = 5.5 + Math.random() * 18.0;
+      const angle = Math.random() * Math.PI * 2;
+      infallingRadii[i] = r;
+      infallingAngles[i] = angle;
+      infallingSpeeds[i] = 0.06 + Math.random() * 0.10;
+      infallingYOffsets[i] = (Math.random() - 0.5) * (r * 0.15);
+
+      infallingPositions[i * 3] = Math.cos(angle) * r;
+      infallingPositions[i * 3 + 1] = infallingYOffsets[i];
+      infallingPositions[i * 3 + 2] = Math.sin(angle) * r;
+
+      const col = Math.random() > 0.4 ? new THREE.Color(0xfde047) : new THREE.Color(0x38bdf8);
+      infallingColors[i * 3] = col.r;
+      infallingColors[i * 3 + 1] = col.g;
+      infallingColors[i * 3 + 2] = col.b;
+    }
+
+    infallingGeo.setAttribute('position', new THREE.BufferAttribute(infallingPositions, 3));
+    infallingGeo.setAttribute('color', new THREE.BufferAttribute(infallingColors, 3));
+
+    const infallingParticles = new THREE.Points(infallingGeo, new THREE.PointsMaterial({
+      size: 0.9,
+      map: starTexture,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.92,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    }));
+    // Align particles with the horizontal accretion disk tilt
+    infallingParticles.rotation.x = -0.22;
+    blackHoleGroup.add(infallingParticles);
+
+
     // ==========================================
     // 4. LIGHTING & ILLUMINATION
     // ==========================================
@@ -1557,10 +1907,14 @@ export function HeroScene({ theme }: { theme: 'dark' | 'light' }) {
       starPoints.rotation.y += 0.0001;
       earthMesh.rotation.y += 0.003;
       earthCloudMesh.rotation.y += 0.0038;
+      earthTextOrbitalMesh.rotation.y += 0.005;
+      earthTextTexture.offset.x -= 0.002;
       moonPivot.rotation.y += 0.008;
 
       sunMesh.rotation.y += 0.001;
       sunCoronaMesh.rotation.y -= 0.0008;
+      sunTextOrbitalMesh.rotation.y += 0.005;
+      sunTextTexture.offset.x -= 0.002;
       const sunPulse = 1.0 + Math.sin(frameCount * 0.035) * 0.022;
       sunCoronaMesh.scale.set(sunPulse, sunPulse, sunPulse);
       mercuryPivot.rotation.y += 0.014;
@@ -1582,6 +1936,30 @@ export function HeroScene({ theme }: { theme: 'dark' | 'light' }) {
 
       neptuneMesh.rotation.y += 0.003;
       tritonPivot.rotation.y += 0.011;
+
+      // Animate Supermassive Black Hole Accretion Disk & Infalling Particles
+      accretionDiskMesh.rotation.z += 0.007;
+      lensingArcMesh.rotation.z -= 0.005;
+      photonRingMesh.rotation.y += 0.003;
+
+      const infallingPosAttr = infallingGeo.attributes.position as THREE.BufferAttribute;
+      const infallingArray = infallingPosAttr.array as Float32Array;
+      for (let i = 0; i < infallingCount; i++) {
+        infallingAngles[i] += 0.012 + (1.0 / infallingRadii[i]) * 0.08;
+        infallingRadii[i] -= infallingSpeeds[i];
+
+        // If light particle crosses event horizon (r <= 5.2), swallow it and respawn at outer rim
+        if (infallingRadii[i] <= 5.2) {
+          infallingRadii[i] = 22.0 + Math.random() * 4.0;
+          infallingAngles[i] = Math.random() * Math.PI * 2;
+          infallingYOffsets[i] = (Math.random() - 0.5) * (infallingRadii[i] * 0.15);
+        }
+
+        infallingArray[i * 3] = Math.cos(infallingAngles[i]) * infallingRadii[i];
+        infallingArray[i * 3 + 1] = infallingYOffsets[i] * (infallingRadii[i] / 22.0);
+        infallingArray[i * 3 + 2] = Math.sin(infallingAngles[i]) * infallingRadii[i];
+      }
+      infallingPosAttr.needsUpdate = true;
 
       if (cometActive) {
         cometPos.add(cometVel);
@@ -1639,7 +2017,7 @@ export function HeroScene({ theme }: { theme: 'dark' | 'light' }) {
       <div ref={containerRef} className="absolute inset-0 w-full h-full pointer-events-auto cursor-grab active:cursor-grabbing" />
 
       {/* SPACE FLIGHT HUD TELEMETRY OVERLAY */}
-      <div className="fixed top-[140px] left-4 right-4 md:left-6 md:right-6 z-20 pointer-events-none flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
+      <div className="fixed top-[145px] left-4 right-4 md:left-6 md:right-6 z-20 pointer-events-none flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
         {/* Active Target Planet Telemetry Card */}
         <div className="bg-slate-950/85 backdrop-blur-md border border-cyan-500/30 text-white px-2.5 py-1.5 rounded-xl flex items-center gap-2 shadow-lg pointer-events-auto transition-all duration-300">
           <div className="w-7 h-7 rounded-lg bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center shrink-0">
@@ -1704,3 +2082,5 @@ export function HeroScene({ theme }: { theme: 'dark' | 'light' }) {
     </div>
   );
 }
+
+export default HeroScene;
